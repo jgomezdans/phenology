@@ -56,10 +56,10 @@ def save_raster ( fname_out, raster_in, cell_size, \
     for b in xrange ( n_bands ):
         try:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ b, :, :].astype(np.float32) )
+                raster_in [ b, :, :].astype(np.float32).T )
         except IndexError:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ :, :].astype(np.float32) )
+                raster_in [ :, :].astype(np.float32).T )
     dst_ds = None
 
 def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
@@ -87,3 +87,5 @@ def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
         print "Saved to %s_%04d.tif" % ( fname_out, y )
             
     print "Finished"
+if __name__ == "__main__":
+    process_vi_files ( "/data/geospatial_20/ucfajlg/MODIS/", "NDVI_" )
