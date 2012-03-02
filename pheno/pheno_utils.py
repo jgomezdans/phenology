@@ -26,7 +26,7 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
     C = np.transpose ( B, (0, 2, 1, 3 ) )
     if method == "mean":
         reduced_raster = np.mean ( np.mean ( C, axis=-1), axis=-1 )
-    elif:
+    else:
         raise NotImplemented, "Only mean reduction supported by now"
     return reduced_raster
 
