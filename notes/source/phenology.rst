@@ -54,7 +54,7 @@ FluxNet site, an area in Easter Germany where trees are mostly decidious (beech)
 .. plot::
    :include-source: 
     
-   from pheno_utils import *
+   from phenology import *
    plot_ndvi ( 10.25, 51.05 ) # NDVI around Hainich FluxNET site
    plt.show()
 
@@ -90,6 +90,10 @@ average temperature for the day is more than a certain base temperature. This
 allows for some normalisation of timing of events across latitudinal ranges, for
 example. 
 
+.. todo::
+    
+   Put a few references on climate and phenology and how it impacts C cycle.
+
 Accessing the AGDD data
 ------------------------
 
@@ -104,15 +108,21 @@ temperature. Some functions have been provided for you to access the data easily
    import matplotlib.pyplot as plt
    import numpy as np
    from phenology import *
+   # These next few lines retrieve the mean daily temperature and
+   # AGDD for the three sites mentioned above
    ( temp_hainich, agdd_hainich ) = calculate_gdd( 2005, \
             latitude=51, longitude=10 )
    ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, \
             latitude=57, longitude=86 )
    ( temp_tumbarumba, agdd_tumbarumba ) = calculate_gdd( 2005, \
             latitude=-35, longitude=148 )
+   # Temporal range for plots
    t_range =  np.arange ( 1, 366 )
+   # First subplot is Hainich (DE)
    plt.subplot ( 3, 1, 1)
+   # Put a grey area for the AGDD calculation bounds
    plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
+   # Plot temperature
    plt.plot ( t_range, temp_hainich, '-r', label="Tm" )
    plt.ylabel("Mean Temp [degC]")
    plt.grid ( True )
@@ -120,6 +130,7 @@ temperature. Some functions have been provided for you to access the data easily
    plt.plot ( t_range, agdd_hainich, '-g', label="AGDD" )
    plt.ylabel ( "AGDD [degC]")
    plt.subplot ( 3, 1, 2)
+   # Second subplot is Tomsk. Everything as before
    plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
    plt.plot ( t_range, temp_tomsk, '-r', label="Tm" )
    plt.ylabel("Mean Temp [degC]")
@@ -128,25 +139,81 @@ temperature. Some functions have been provided for you to access the data easily
    plt.plot ( t_range, agdd_tomsk, '-g', label="AGDD" )
    plt.ylabel ( "AGDD [degC]")
    plt.subplot ( 3, 1, 3)
+   # Third subplot is Tumbarumba. Everything as before
    plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
    plt.plot ( t_range, temp_tumbarumba, '-r', label="Tm" )
    plt.ylabel("Mean Temp [degC]")
    plt.grid ( True )
+   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
    plt.twinx()
    plt.plot ( t_range, agdd_tumbarumba, '-g', label="AGDD" )
    plt.ylabel ( "AGDD [degC]")
    plt.xlabel("DoY/2005")
+   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
    plt.show()
             
+Examine the previous plots, noting particularly the inflexion points in the 
+AGDD curve, and how they relate to the base and maximum mean daily temperatures
+(shown in the grey area). Also not how for the Tumbarumba site, there is a 
+seasonality with respect to the Northern Hemisphere sites. 
 
+Phenology models
+-----------------
 
-Inspection of typical evolution of vegetation indices indicates that a simple 
-phenology model that assumes a quadratic relationship between AGDD and the index
-might be appropriate. 
+Inspection of typical evolution of vegetation indices like the one carried out
+above suggest that a simple phenology model that goes from a minimum to a maximum
+and then decreases again may be suitable, at least for the Northern Hemisphere.
+One such method used successfully in `De Beurs and Henebry (2008)`_ by using
+a simple quadratic function of AGDD:
 
 .. math::
     
     NDVI(t) = a\cdot AGDD^{2} + b\cdot AGDD + c 
+
+.. plot::
+   :include-source:
+       
+   # Import some libraries, in case you haven't yet imported them
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from scipy.optimize import leastsq
+   from phenology import *
+   # These next few lines retrieve the mean daily temperature and
+   # AGDD, but with 
+   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, latitude=57, longitude=86 )
+   # Grab NDVI. Only the first year
+   ndvi = plot_ndvi (  86, 57 )[:12]
+   # Need to clear plot
+   plt.clf()
+   # The following array are the mid-month DoY dates to which NDVI could relate
+   # to
+   t = np.array([ 16,  44,  75, 105, 136, 166, 197, 228, 258, 289, 319, 350])
+   # We will interpolate NDVI to be daily. For this we need the following array
+   ti = np.arange ( 1, 366 )
+   # This is a simple linear interpolator
+   ndvid = np.interp ( ti, t, ndvi )
+   # The fitness function is defined as a lambda function for simplicity
+   fitf = lambda p: ndvid -( p[0]*agdd_tomsk*agdd_tomsk +p[1]*agdd_tomsk+p[2])
+   # Fit fitf using leastsq, with an initial guess of 0, 0, 0
+   ( xsol, msg ) = leastsq ( fitf, [0, 0,0] )
+   plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
+   plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
+       '-g', label="Fit" )
+   # Now, try a different base temperature
+   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, tbase=-5,latitude=57, \
+        longitude=86 )
+   ( xsol, msg ) = leastsq ( fitf, [0, 0,0] )
+   plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
+      '-b', label="Fit (-5)" )
+   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+   plt.grid ( True )
+   plt.show()     
+    
+We can see that the quadratic model has some complications even fitting a simpel
+NDVI profile like that of Siberia.
     
 Other more complex models have been developed in the literature, that make use
 of different temporal template shapes (such as asymetric Gaussian functions, or
@@ -167,6 +234,8 @@ However, since NDVI is just a proxy for amount of vegetation
 
     
     
+.. _De Beurs and Henebry (2008): http://geography.vt.edu/deBeurs_Henebry_JClimate.pdf
+
 .. _Sobrino and Julien (2011): http://www.uv.es/juy/Doc/Sobrino_GIMMS-global-trends_IJRS_2011.pdf
 
 .. _Zhang et al. (2003): http://www.sciencedirect.com/science/article/pii/S0034425702001359

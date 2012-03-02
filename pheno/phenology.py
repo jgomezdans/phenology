@@ -67,3 +67,4 @@ def plot_ndvi ( longitude, latitude ):
     plt.xlabel("Date")
     plt.ylabel("NDVI [-]")
     plt.show()
+    return ( data )
