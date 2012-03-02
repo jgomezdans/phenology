@@ -38,7 +38,7 @@ def save_raster ( fname_out, raster_in, cell_size, \
     two-dimensional, or three dimensional, with the first dimension being the
     number of bands. By default, we use GeoTIFF output."""
     
-    drv = gdal.CreateDriverByName ( driver )
+    drv = GetDriverByName ( driver )
     # Get shapes
     try:
         ( n_bands, nx, ny ) = raster_in.shape
@@ -56,10 +56,10 @@ def save_raster ( fname_out, raster_in, cell_size, \
     for b in xrange ( n_bands ):
         try:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ b, :, :].astype(np.float32).T )
+                raster_in [ b, :, :].astype(np.float32) )
         except IndexError:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ :, :].astype(np.float32).T )
+                raster_in [ :, :].astype(np.float32) )
     dst_ds = None
 
 def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
@@ -80,7 +80,7 @@ def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
     for y in np.unique ( years ):
         print "Doing year ", y
         year_sel = ( years == y )
-        annual = np.zeros ( ( 12, nny, nnx ) )
+        annual = np.zeros ( ( 12, nnx, nny ) )
         for ( i, f_in ) in enumerate ( files[ year_sel ] ):
             annual [i, :, : ] = resample_dataset ( f_in, x_factor, y_factor )
         save_raster ( "%s_%04d.tif" % ( fname_out, y ), annual, cell_size )
