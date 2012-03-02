@@ -49,7 +49,7 @@ def save_raster ( fname_out, raster_in, cell_size, \
         n_bands = 1
     # Create output file
     dst_ds = drv.Create ( fname_out, ny, nx, n_bands, dtype, \
-            ["TFW=YES","TILED=YES","COMPRESSION=LZW"] )
+            ["TFW=YES","TILED=YES","COMPRESS=LZW"] )
     dst_ds.SetGeoTransform( [-180, cell_size, 0.0, 90, 0.0, -cell_size])
     dst_ds.SetProjection ( 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84"' + \
     ',6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],' + \
