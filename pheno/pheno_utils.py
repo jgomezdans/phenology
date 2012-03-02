@@ -5,6 +5,56 @@ import matplotlib.pyplot as plt
 import numpy as np
 from osgeo import gdal
 
+def calculate_gdd ( year, fname="", base=10 ):
+    """This function calculates the Growing Degree Days for a given year from
+    the ERA Interim daily mean surface temperature data. The user can select a 
+    base temperature in degrees Celsius. By default, the value is 10."""
+    g = gdal.Open ( fname )
+    temp = g.ReadAsArray()[(year-1)*365:(year*365), :, :]
+    # Scale to degree C
+    temp = np.where ( temp!=-32767, temp*0.0020151192442093 + 258.72093867714 \
+        - 273.15, -32767)
+    b = np.clip ( temp, base, 10 )
+    c = np.where ( b-10<0, 0, b-10 )
+    agdd = c.cumsum (axis=0)
+    return agdd
+
+def fit_ndvi ( ndvi, agdd, function="quadratic" ):
+    """Fits the NDVI data to a given function. Two such functions are provided:
+    
+    * a simple quadratic
+    * a double logistic function
+    
+    The second is clever, and flips itself in terms of hemisphere. Or at least
+    I hope so."""
+    # Import the leastsq solver
+    from scipy.optimize import leastsq
+    if function == "quadratic":
+        fit_function = lambda p: p[0]*agdd*agdd + p[1]*agdd + p[2] - ndvi
+        (xsol, cov_x, infodict, mesg, ier ) =leastsq( fit_function, \
+                [0., 0., 0], full_output=True)
+        rmse = infodict['fvec'].std()
+        return ( rmse, xsol, cov_x, infodict, mesg, ier )
+    elif function == "dbl_logistic":
+        ndvi_w = ndvi.min()
+        ndvi_m = ndvi.max()
+        fit_function1 = lambda p: ndvi_w + (ndvi_m - ndvi_w)* ( \
+            1./(1+np.exp(-p[0]*(agdd-p[1]))) + \
+            1./(1+np.exp(p[2]*(agdd-p[3]))) - 1 )
+        fit_function2 = lambda p: ndvi_m - (ndvi_m - ndvi_w)* ( \
+            1./(1+np.exp(-p[0]*(agdd-p[1]))) + \
+            1./(1+np.exp(p[2]*(agdd-p[3]))) - 1 )
+        (xsol1, cov_x1, infodict1, mesg1, ier1 ) =leastsq( fit_function1, \
+            [0., 0., 0], full_output=True)
+        (xsol2, cov_x2, infodict2, mesg2, ier2 ) =leastsq( fit_function2, \
+            [0., 0., 0], full_output=True)    
+        rmse1 = infodict1['fvec'].std()
+        rmse2 = infodict2['fvec'].std()
+        if rmse1 < rmse2:
+            return ( rmse1, xsol1, cov_x1, infodict1, mesg1, ier1 )
+        else:
+            return ( rmse2, xsol2, cov_x2, infodict2, mesg2, ier2 )
+            
 def resample_dataset ( fname, x_factor, y_factor, method="mean", \
             data_min=-1000, data_max=10000 ):
     """This function resamples a GDAL dataset (single band) by a factor of
