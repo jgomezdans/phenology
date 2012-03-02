@@ -21,16 +21,18 @@ might be appropriate.
 Other more complex models have been developed in the literature, that make use
 of different temporal template shapes (such as asymetric Gaussian functions, or
 the double logistic function). A double logistic model (after e.g. 
-`Sobrino and Julien (2011)`_ is given by 
+`Zhang et al. (2003)`_ or `Sobrino and Julien (2011)`_ ) is given by 
 
 .. math::
     
-    NDVI(t) =   NDVI_{0} + (NDVI_{M} - NDVI_{0} )\cdot%
-    \left[\frac{1}{1+\exp(-m_{s}(t-S)} + %
-    \frac{1}{1+\exp(-m_{A}(t-A)} + 1\right)
+    NDVI(t) =   NDVI_{0} + (NDVI_{M} - NDVI_{0} )\cdot
+    \left[\frac{1}{1+\exp(-m_{s}(t-S))} + 
+    \frac{1}{1+\exp(m_{A}(t-A))} + 1\right]
 
 
     
     
 .. _Sobrino and Julien (2011): http://www.uv.es/juy/Doc/Sobrino_GIMMS-global-trends_IJRS_2011.pdf
+
+.. _Zhang et al. (2003): http://www.sciencedirect.com/science/article/pii/S0034425702001359
     
