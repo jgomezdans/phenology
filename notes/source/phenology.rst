@@ -2,12 +2,20 @@
 Fitting a simple phenology model to satellite observations
 ================================================================
 
-Phenology refers to the study of temporal behaviour of the land surface, such as
-the timing of leaf emergence or leaf fall. These evens are of great importance, 
-as they control the period when decidious trees are able to photosynthesise solar
-radition and hence act as carbon sinks.
+Phenology refers to the study of timing of recurrent events, such as
+leaf emergence, leaf fall, etc. In the context of carbon science, the timing of
+emergence of leaves and the duration of the leaf-on period is crucial to 
+understand the impact of decidious trees on atmospheric carbon levels. The 
+timing of vegetation is also important from the point of view of other ecosystem 
+components: vegetation flowering dates and fruit production are an important 
+constraint on the temporal behaviour of fruit-eating wildlife, for example.
 
-A simple phenology model
+Monitoring phenology is important also because plant phenology reacts to a 
+warmer climate, where leaf emergence happens earlier, and leaf fall happens 
+later due to milder winters. 
+
+
+Simple phenology models
 =========================
 
 Inspection of typical evolution of vegetation indices indicates that a simple 
@@ -27,7 +35,9 @@ the double logistic function). A double logistic model (after e.g.
     
     NDVI(t) =   NDVI_{0} + (NDVI_{M} - NDVI_{0} )\cdot
     \left[\frac{1}{1+\exp(-m_{s}(t-S))} + 
-    \frac{1}{1+\exp(m_{A}(t-A))} + 1\right]
+    \frac{1}{1+\exp(m_{A}(t-A))} - 1\right]
+    
+
 
 
     
