@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Some data rejiggling functions"""
-
+import pdb
+import matplotlib.pyplot as plt
 import numpy as np
 from osgeo import gdal
 
@@ -22,7 +23,7 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
     nnx = nx/x_factor
     nny = ny/y_factor
     # Reshape the raster data...
-    B = np.reshape ( gdal_data.ReadAsArray(), ( nnx, x_factor, nny, y_factor ) )
+    B = np.reshape ( gdal_data.ReadAsArray(), ( nny, y_factor, nnx, x_factor ) )
     B = np.ma.array ( B, mask=np.logical_or ( B <= data_min, B >= data_max) )
     # Re-jiggle the dimensions so we can easily average over then
     C = np.transpose ( B, (0, 2, 1, 3 ) )
@@ -30,6 +31,7 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
         reduced_raster = np.mean ( np.mean ( C, axis=-1), axis=-1 )
     else:
         raise NotImplemented, "Only mean reduction supported by now"
+
     return reduced_raster
 
 def save_raster ( fname_out, raster_in, cell_size, \
@@ -46,7 +48,7 @@ def save_raster ( fname_out, raster_in, cell_size, \
         ( nx, ny ) = raster_in.shape
         n_bands = 1
     # Create output file
-    dst_ds = drv.Create ( fname_out, nx, ny, n_bands, dtype )
+    dst_ds = drv.Create ( fname_out, ny, nx, n_bands, dtype )
     dst_ds.SetGeoTransform( [-0.75, cell_size, 0.0, 90.75, 0.0, -cell_size])
     dst_ds.SetProjection ( 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84"' + \
     ',6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],' + \
@@ -56,10 +58,10 @@ def save_raster ( fname_out, raster_in, cell_size, \
     for b in xrange ( n_bands ):
         try:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ b, :, :].astype(np.float32).T )
+                raster_in [ b, :, :].astype(np.float32) )
         except IndexError:
             dst_ds.GetRasterBand ( b+1 ).WriteArray ( \
-                raster_in [ :, :].astype(np.float32).T )
+                raster_in [ :, :].astype(np.float32) )
     dst_ds = None
 
 def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
@@ -84,12 +86,13 @@ def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
             print "Doing year ", y
             
             year_sel = ( years == y )
-            annual = np.zeros ( ( 12, nnx, nny ) )
+            annual = np.zeros ( ( 12, nny, nnx ) )
             for ( i, f_in ) in enumerate ( files[ year_sel ] ):
                 annual [i, :, : ] = resample_dataset ( f_in, x_factor, y_factor )
                 print i, f_in, "Done..."
             save_raster ( "%s_%04d.tif" % ( fname_out, y ), annual, cell_size )
             print "Saved to %s_%04d.tif" % ( fname_out, y )
+            
             
     print "Finished"
 if __name__ == "__main__":
