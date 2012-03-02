@@ -81,20 +81,24 @@ def process_vi_files ( data_dir, fname_out, cell_size=1.5, vi="NDVI" ):
     
     for y in np.unique ( years ):
         if y > 2000 and y < 2012:
-            # 2000 only has 11 months' worth of data. Skip it
-            # 2012 isn't yet finished...
-            print "Doing year ", y
-            
-            year_sel = ( years == y )
-            annual = np.zeros ( ( 12, nny, nnx ) )
-            for ( i, f_in ) in enumerate ( files[ year_sel ] ):
-                annual [i, :, : ] = resample_dataset ( f_in, x_factor, y_factor )
-                print i, f_in, "Done..."
-            save_raster ( "%s_%04d.tif" % ( fname_out, y ), annual, cell_size )
-            print "Saved to %s_%04d.tif" % ( fname_out, y )
+            if not os.path.exists ( "%s_%04d.tif" % ( fname_out, y ) ):
+                # 2000 only has 11 months' worth of data. Skip it
+                # 2012 isn't yet finished...
+                print "Doing year ", y
+                
+                year_sel = ( years == y )
+                annual = np.zeros ( ( 12, nny, nnx ) )
+                for ( i, f_in ) in enumerate ( files[ year_sel ] ):
+                    annual [i, :, : ] = resample_dataset ( f_in, x_factor,\
+                        y_factor )
+                    print i, f_in, "Done..."
+                save_raster ( "%s_%04d.tif" % ( fname_out, y ), annual, \
+                        cell_size )
+                print "Saved to %s_%04d.tif" % ( fname_out, y )
             
             
     print "Finished"
 if __name__ == "__main__":
+    
     process_vi_files ( "/data/geospatial_20/ucfajlg/MODIS/", \
         "/data/geospatial_20/ucfajlg/MODIS/output/NDVI" )
