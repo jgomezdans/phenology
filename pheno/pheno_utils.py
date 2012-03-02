@@ -61,8 +61,9 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
     (``x_factor``, ``y_factor``) in x and y. By default, the only method used
     is to calculate the mean. The ``data_min`` and ``data_max`` parameters are
     used to mask out pixels in value"""
-
-    # First open the file
+    QA_OK = np.array([0, 1, 4, 12, 8, 64, 512, 2048] )# VI OK
+    # Table in http://gis.cri.fmach.it/modis-ndvi-evi/
+    # First open the NDVI file
     fname = 'HDF4_EOS:EOS_GRID:"%s":' % fname + \
             'MOD_Grid_monthly_CMG_VI:CMG 0.05 Deg Monthly NDVI'
     gdal_data = gdal.Open ( fname )
@@ -74,7 +75,14 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
     nny = ny/y_factor
     # Reshape the raster data...
     B = np.reshape ( gdal_data.ReadAsArray(), ( nny, y_factor, nnx, x_factor ) )
-    B = np.ma.array ( B, mask=np.logical_or ( B <= data_min, B >= data_max) )
+    # Now open QA file
+    fname = fname.replace ("NDVI", "VI Quality" )
+    gdal_data = gdal.Open ( fname )
+    qa = gdal_data.ReadAsArray()
+    # Check what goes through QA
+    qa_pass = np.logical_or.reduce([qa==x for x in QA_OK ])
+    
+    B = np.ma.array ( B, mask=qa_pass )
     # Re-jiggle the dimensions so we can easily average over then
     C = np.transpose ( B, (0, 2, 1, 3 ) )
     if method == "mean":
