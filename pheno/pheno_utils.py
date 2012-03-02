@@ -6,20 +6,17 @@ import matplotlib.dates
 import numpy as np
 from osgeo import gdal
 
-def calculate_gdd ( year, fname="", base=10 ):
-    """This function calculates the Growing Degree Days for a given year from
-    the ERA Interim daily mean surface temperature data. The user can select a 
-    base temperature in degrees Celsius. By default, the value is 10."""
-    g = gdal.Open ( fname )
-    temp = g.ReadAsArray()[(year-1)*365:(year*365), :, :]
-    # Scale to degree C
-    temp = np.where ( temp!=-32767, temp*0.0020151192442093 + 258.72093867714 \
-        - 273.15, -32767)
-    b = np.clip ( temp, base, 10 )
-    c = np.where ( b-10<0, 0, b-10 )
-    agdd = c.cumsum (axis=0)
-    return agdd
 
+def pixel_loc ( longitude, latitude ):
+    """This function gets the pixel location from a given longitude and latitude.
+    It is used by user-level functions, and assumes the global 1.5 degree 
+    grid from ERA interim is being used."""
+    
+    igeoT = [ 120.0, 0.6666666666666666, 0.0, 60.0, 0.0, -0.6666666666666666]
+    
+    [ix, iy] = gdal.ApplyGeoTransform ( igeoT, longitude, latitude)
+    return ( ix, iy )
+    
 def fit_ndvi ( ndvi, agdd, function="quadratic" ):
     """Fits the NDVI data to a given function. Two such functions are provided:
     

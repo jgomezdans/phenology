@@ -52,6 +52,7 @@ NDVI for the gridcell that covers the `Hainich <http://www.bgc-jena.mpg.de/publi
 FluxNet site, an area in Easter Germany where trees are mostly decidious (beech).
 
 .. plot::
+   :include-source: 
     
    from pheno_utils import *
    plot_ndvi ( 10.25, 51.05 ) # NDVI around Hainich FluxNET site
@@ -60,16 +61,18 @@ FluxNet site, an area in Easter Germany where trees are mostly decidious (beech)
 The following plot shows some location near the city of Tomsk, in Siberia.
 
 .. plot::
-    
-   from pheno_utils import *
+   :include-source:  
+   
+   from phenology import *
    plot_ndvi ( 86, 57 ) # NDVI around Siberia
    plt.show()
 
 This is the NDVI temporal trajectory for the Tumbarumba Fluxnet site in Australia
 
 .. plot::
-    
-   from pheno_utils import *
+   :include-source:  
+   
+   from phenology import *
    plot_ndvi ( 148, -35 ) # Tumbarumba, Oz
    plt.show()     
 
@@ -90,7 +93,52 @@ example.
 Accessing the AGDD data
 ------------------------
 
-Data from the ERA interim archive have been prepared. 
+Data from the `ERA interim archive <http://data-portal.ecmwf.int/data/d/interim_daily/>`_
+have been prepared. The data available for this practial is the mean daily 
+temperature. Some functions have been provided for you to access the data easily:
+
+.. plot::
+   :include-source: 
+  
+   # Import some libraries, in case you haven't yet imported them
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from phenology import *
+   ( temp_hainich, agdd_hainich ) = calculate_gdd( 2005, \
+            latitude=51, longitude=10 )
+   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, \
+            latitude=57, longitude=86 )
+   ( temp_tumbarumba, agdd_tumbarumba ) = calculate_gdd( 2005, \
+            latitude=-35, longitude=148 )
+   t_range =  np.arange ( 1, 366 )
+   plt.subplot ( 3, 1, 1)
+   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
+   plt.plot ( t_range, temp_hainich, '-r', label="Tm" )
+   plt.ylabel("Mean Temp [degC]")
+   plt.grid ( True )
+   plt.twinx()
+   plt.plot ( t_range, agdd_hainich, '-g', label="AGDD" )
+   plt.ylabel ( "AGDD [degC]")
+   plt.subplot ( 3, 1, 2)
+   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
+   plt.plot ( t_range, temp_tomsk, '-r', label="Tm" )
+   plt.ylabel("Mean Temp [degC]")
+   plt.grid ( True )
+   plt.twinx()
+   plt.plot ( t_range, agdd_tomsk, '-g', label="AGDD" )
+   plt.ylabel ( "AGDD [degC]")
+   plt.subplot ( 3, 1, 3)
+   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
+   plt.plot ( t_range, temp_tumbarumba, '-r', label="Tm" )
+   plt.ylabel("Mean Temp [degC]")
+   plt.grid ( True )
+   plt.twinx()
+   plt.plot ( t_range, agdd_tumbarumba, '-g', label="AGDD" )
+   plt.ylabel ( "AGDD [degC]")
+   plt.xlabel("DoY/2005")
+   plt.show()
+            
+
 
 Inspection of typical evolution of vegetation indices indicates that a simple 
 phenology model that assumes a quadratic relationship between AGDD and the index
