@@ -2,6 +2,7 @@
 """Some data rejiggling functions"""
 import os
 import matplotlib.pyplot as plt
+import matplotlib.dates
 import numpy as np
 from osgeo import gdal
 
@@ -92,6 +93,8 @@ def resample_dataset ( fname, x_factor, y_factor, method="mean", \
 
     return reduced_raster
 
+
+        
 def save_raster ( fname_out, raster_in, cell_size, \
         driver="GTiff",dtype=gdal.GDT_Float32 ):
     """This function saves a raster to a filename. The raster must either be

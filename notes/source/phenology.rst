@@ -39,11 +39,58 @@ result in a mixture of species. A further complication is that the VI is a
 combination of soil (and snow) reflectance and vegetation biochemical composition
 and structure, so it is hard to associate any point in a typical trajectory
 with particular phenological events such as budburst or leaf fall. In these
-cases, simple phenology models are used.
+cases, simple phenology models can be used to interpret the signal.
+
+Plotting NDVI temporal trajectories
+-------------------------------------
+
+Some data and code has been provided for you to visualise VI trajectories. We
+shall be using the MODIS monthly NDVI product, gridded to a global grid of 
+:math:`1.5\times 1.5` degrees. The function ``plot_ndvi`` will plot the complete
+time series for a given logitude and latitude. For example, this plots the
+NDVI for the gridcell that covers the `Hainich <http://www.bgc-jena.mpg.de/public/carboeur/sites/hainich.html>`_
+FluxNet site, an area in Easter Germany where trees are mostly decidious (beech).
+
+.. plot::
+    
+   from pheno_utils import *
+   plot_ndvi ( 10.25, 51.05 ) # NDVI around Hainich FluxNET site
+   plt.show()
+
+The following plot shows some location near the city of Tomsk, in Siberia.
+
+.. plot::
+    
+   from pheno_utils import *
+   plot_ndvi ( 86, 57 ) # NDVI around Siberia
+   plt.show()
+
+This is the NDVI temporal trajectory for the Tumbarumba Fluxnet site in Australia
+
+.. plot::
+    
+   from pheno_utils import *
+   plot_ndvi ( 148, -35 ) # Tumbarumba, Oz
+   plt.show()     
+
+Try a few sites with different latitude and longitudes, and discuss what the
+differences are.
 
 
 Simple phenology models
 =========================
+
+Phenology has been found to be very responsive to temperature. *Growing degree
+days* are a useful way to define phenological events, rather than calendar days, 
+as the latter are rather arbitrary. Growing degree days accumulate anytime the 
+average temperature for the day is more than a certain base temperature. This 
+allows for some normalisation of timing of events across latitudinal ranges, for
+example. 
+
+Accessing the AGDD data
+------------------------
+
+Data from the ERA interim archive have been prepared. 
 
 Inspection of typical evolution of vegetation indices indicates that a simple 
 phenology model that assumes a quadratic relationship between AGDD and the index
@@ -64,7 +111,10 @@ the double logistic function). A double logistic model (after e.g.
     \left[\frac{1}{1+\exp(-m_{s}(AGDD-S))} + 
     \frac{1}{1+\exp(m_{A}(AGDD-A))} - 1\right]
     
-
+Clearly, the second model will provide a more flexible fit than the quadratic model
+by virtue of having 6 parameters (the :math:`NDVI_{0}` and :math:`NDVI_{M}` terms
+are maximum and minimum NDVI, and can be readily estimated from the time series).
+However, since NDVI is just a proxy for amount of vegetation
 
 
     
