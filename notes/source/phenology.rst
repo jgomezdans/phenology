@@ -212,8 +212,11 @@ a simple quadratic function of AGDD:
    plt.grid ( True )
    plt.show()     
     
-We can see that the quadratic model has some complications even fitting a simpel
-NDVI profile like that of Siberia.
+We can see that the quadratic model has some complications even fitting a simple
+NDVI profile like that of Siberia. The model, as introduced above, will also 
+struggle to cope with NDVI patterns typical of the Southern Hemisphere (unless
+a temporal shift is introduced). These limitations have lead to the development
+of more complex and robust methods. 
     
 Other more complex models have been developed in the literature, that make use
 of different temporal template shapes (such as asymetric Gaussian functions, or
@@ -226,10 +229,32 @@ the double logistic function). A double logistic model (after e.g.
     \left[\frac{1}{1+\exp(-m_{s}(AGDD-S))} + 
     \frac{1}{1+\exp(m_{A}(AGDD-A))} - 1\right]
     
-Clearly, the second model will provide a more flexible fit than the quadratic model
-by virtue of having 6 parameters (the :math:`NDVI_{0}` and :math:`NDVI_{M}` terms
-are maximum and minimum NDVI, and can be readily estimated from the time series).
-However, since NDVI is just a proxy for amount of vegetation
+In comparison with the quadratic model, the double logistic model will provide a
+more flexible fit to the data by virtue of having 6 parameters (the :math:`NDVI_{0}`
+and :math:`NDVI_{M}` terms are maximum and minimum NDVI, and can be readily 
+estimated from the time series).
+
+Other methods to fit a model to observations of NDVI rely on Fourier analysis
+ideas. Fourier analysis states that within a closed interval, any periodic
+function can be expressed as a sum of increasing frequency sine waves:
+    
+.. math::
+    
+    NDVI(t) = \overbar{NDVI}(t) + sum_{i=1}^{N/2}A_{i}\cos(2\pi i t/N) + \phi_{i}
+    
+where :math:`\overbar{NDVI}(t)` is the mean NDVI value within the period of 
+interest :math:`(0,N)`. :math:`A_{i}` and :math:`\phi_{i}` are the magnitude and
+phase of the :math:`i`-th harmonic, respectively. Usually, only a few terms of the
+summation are required to produce a reasonable fit to the observations. An added
+benefit is that the different harmonics allow for a more detailed exploration of
+the temporal dynamics observed by the sensor: the first term (the 0-th harmonic)
+can be related to the mean biome amount of vegetation. The first and second
+harmonics relate to the dynamics of annual and biannual evoluation of vegetation.
+Finally, frequency-domain analysis is fairly robust against noise. However, there
+are some shortcomings: data gaps need to be filled in or "padded", and the
+frequency at which one can extract information is governed by the periodicity of
+the data, wihch in our case is monthly. Also, fast events might be blurred. For
+a more in-depht analysis, see e.g. `Moody and Johnson (2001)`_
 
 
     
@@ -239,4 +264,4 @@ However, since NDVI is just a proxy for amount of vegetation
 .. _Sobrino and Julien (2011): http://www.uv.es/juy/Doc/Sobrino_GIMMS-global-trends_IJRS_2011.pdf
 
 .. _Zhang et al. (2003): http://www.sciencedirect.com/science/article/pii/S0034425702001359
-    
+.. _Moody and Johnson (2001): ftp://ftp.ccrs.nrcan.gc.ca/ftp/ad/Phenology/PhenologyPapers/Moody_2001_AVHRR_DFourierTransPhenology_USA.pdf
