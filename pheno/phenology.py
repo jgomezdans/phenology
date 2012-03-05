@@ -32,6 +32,24 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
 
+def interpolate_daily( ndvi ):
+    
+    ndvi_daily = []
+    for year in xrange ( 2001, 2012):
+        ndvi_i = ndvi [ (year-2001)*12:( year - 2001 + 1)*12 ]
+        t = np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
+        258, 289, 319, 350 ] )
+        # We will interpolate NDVI to be daily. For this we need the following array
+        if year%4 == 0:
+            ti = np.arange ( 1, 367 ) # Leap year
+        else:
+            ti = np.arange ( 1, 366 )
+        # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
+        # everything else easier.
+        ndvid = np.interp ( ti, t, ndvi_i )
+        ndvi_daily = np.r_[ ndvi_daily, ndvid ]
+    return ndvi_daily
+                          
 def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
     """The NDVI/Phenology model mismatch function. This can be a multi-year
     function that will be minimised wrt to the VI observations. This function
@@ -42,26 +60,25 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
 
     # output stores the predictions    
     output = []
+    ndvi_daily = interpolate_daily ( ndvi )
     for year in years:
-        ndvi_i = ndvi [ (year-2001)*12:( year - 2001 + 1)*12 ]
-        agdd_i =  agdd [ (year-2001)*365:( year - 2001 + 1)*365 ]
-        t = np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
-            258, 289, 319, 350 ] )
-        # We will interpolate NDVI to be daily. For this we need the following array
-        ti = np.arange ( 1, 366 )
-        # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
-        # everything else easier.
-        ndvid = np.interp ( ti, t, ndvi_i )
-        if n_extra_params == 0:
+        if year%4 == 0:
+            ndvid = ndvi_daily[ (year-2001)*365:( year - 2001 + 1)*366 ]
+            agdd_i =  agdd [ (year-2001)*365:( year - 2001 + 1)*366 ]
+        else:
+            ndvid = ndvi_daily[ (year-2001)*365:( year - 2001 + 1)*365 ]
+            agdd_i =  agdd [ (year-2001)*365:( year - 2001 + 1)*365 ]
+        
+        if pheno_func.__name__ != "fourier_model":
             fitness = lambda p, ndvi_in, agdd: ndvi_in - pheno_func ( p, agdd )
             oot = fitness ( p, ndvid, agdd_i )            
-            output.append ( oot )
+            [ output.append ( x ) for x in oot ]
         else:
             fitness = lambda p, ndvi_in, agdd, n_harm: \
                     ndvi_in - pheno_func ( p, agdd, n_harm=n_harm )
             oot = fitness ( p, ndvid, agdd_i, n_harm )            
-            output.append ( oot )
-    return output
+            [ output.append ( x ) for x in oot ]
+    return np.array(output).squeeze()
         
         
 def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
@@ -86,19 +103,25 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
         years = [ year]
     else:
         raise TypeError, "year has to be a scalar or  list"
-    ndvi_all = get_ndvi (  longitude, latitude )
+    ndvi_all = get_ndvi (  longitude, latitude )/10000.
+    ( temp, agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
+            latitude=latitude, longitude=longitude )
     xinit = [0,] * n_params
     ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
-        args=( pheno_func, ndvi_all, agdd_all, years, n_harm=3 ) )
-
-    
-    plt.plot ( ti, fourier_model ( xsol, agdd ), \
-                '-g', label="Logistic Fit" )
-        
-    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
-    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-    plt.grid ( True )
-    return ( agdd, ndvi, xsol, msg )
+        args=( pheno_func, ndvi_all, agdd_all, years, n_harm ) )
+    fwd_model = []
+    if pheno_model != "fourier":
+        for y in xrange( 2001, 2012):
+            agdd = agdd_all [ (y-2001)*365:( y - 2001 + 1)*365 ]
+            ax = pheno_func ( xsol, agdd )
+            [fwd_model.append ( x ) for x in ax]
+    else:
+        for y in xrange( 2001, 2012):
+            agdd = agdd_all [ (y-2001)*365:( y - 2001 + 1)*365 ]
+            ax = pheno_func ( xsol, agdd, n_harm )
+            [fwd_model.append ( x ) for x in ax]
+                
+    return ( agdd_all, ndvi_all, xsol, msg, np.array (fwd_model) )
     
     
 def calculate_gdd ( year=None, tbase=10, tmax=40, \
@@ -113,13 +136,14 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
     a = 0.0020151192442093
     b = 258.72093867714
     # Check that year range is OK
-    assert ( year >= 2001 and year <= 2011 or year is None )
+    assert ( (year >= 2001 and year <= 2011) or (year is None) )
     assert ( tmax > tbase )
-    if year == 2004 or year == 2008:
-        n_doys = 366
-    else:
-        n_doys = 365
-    year = year - 2001
+    if year is not None:
+        if year == 2004 or year == 2008:
+            n_doys = 366
+        else:
+            n_doys = 365
+        year = year - 2001
     if latitude is None:
         assert ( longitude is None ) 
         g = gdal.Open ( fname )
@@ -145,7 +169,14 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
         temp = np.where ( temp!=-32767, temp*a + b- 273.15, -32767)
         b = np.clip ( temp, tbase, tmax )
         c = np.where ( b-tbase < 0, 0, b-tbase )
-        agdd = c.cumsum (axis=0)
+        if year is None:
+            agdd = np.zeros( 4017 )
+            for y in xrange ( 10 ):
+                a = c[y*365:(y+1)*365]
+                o = a.cumsum ( axis=0)
+                agdd[y*365:(y+1)*365] = o
+        else:
+            agdd = c.cumsum ( axis=0 )
         
     return ( temp, agdd )
 
