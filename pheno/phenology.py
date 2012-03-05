@@ -106,7 +106,7 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
     ndvi_all = get_ndvi (  longitude, latitude )/10000.
     ( temp, agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
             latitude=latitude, longitude=longitude )
-    xinit = [0,] * n_params
+    xinit = [0.5,] * n_params
     ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
         args=( pheno_func, ndvi_all, agdd_all, years, n_harm ) )
     fwd_model = []
@@ -121,7 +121,8 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
             ax = pheno_func ( xsol, agdd, n_harm )
             [fwd_model.append ( x ) for x in ax]
                 
-    return ( agdd_all, ndvi_all, xsol, msg, np.array (fwd_model) )
+    return ( agdd_all, interpolate_daily( ndvi_all ), xsol, msg, \
+            np.array (fwd_model) )
     
     
 def calculate_gdd ( year=None, tbase=10, tmax=40, \
