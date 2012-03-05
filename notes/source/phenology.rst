@@ -55,7 +55,7 @@ FluxNet site, an area in Easter Germany where trees are mostly decidious (beech)
    :include-source: 
     
    from phenology import *
-   plot_ndvi ( 10.25, 51.05 ) # NDVI around Hainich FluxNET site
+   get_ndvi ( 10.25, 51.05, plot=True ) # NDVI around Hainich FluxNET site
    plt.show()
 
 The following plot shows some location near the city of Tomsk, in Siberia.
@@ -64,7 +64,7 @@ The following plot shows some location near the city of Tomsk, in Siberia.
    :include-source:  
    
    from phenology import *
-   plot_ndvi ( 86, 57 ) # NDVI around Siberia
+   get_ndvi ( 86, 57, plot=True) # NDVI around Siberia
    plt.show()
 
 This is the NDVI temporal trajectory for the Tumbarumba Fluxnet site in Australia
@@ -73,7 +73,7 @@ This is the NDVI temporal trajectory for the Tumbarumba Fluxnet site in Australi
    :include-source:  
    
    from phenology import *
-   plot_ndvi ( 148, -35 ) # Tumbarumba, Oz
+   get_ndvi ( 148, -35, plot=True) # Tumbarumba, Oz
    plt.show()     
 
 Try a few sites with different latitude and longitudes, and discuss what the

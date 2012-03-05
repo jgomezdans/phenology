@@ -29,14 +29,14 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
                           
-def fit_phenology_model ( longitude, latitude, year, \
+def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
             tbase=10, tmax=40, n_harm=3 ):
     # These next few lines retrieve the mean daily temperature and
     # AGDD, but with 
     ( temp, agdd ) = calculate_gdd( year, latitude=latitude, \
         longitude=longitude )
     # Grab NDVI. Only the first year
-    ndvi = plot_ndvi (  longitude, latitude )[ (year-2001)*12:(year-2002)*12 ]
+    ndvi = get_ndvi (  longitude, latitude )[ (year-2001)*12:(year-2002)*12 ]
     # Need to clear plot
     plt.clf()
     # The following array are the mid-month DoY dates to which NDVI could relate
@@ -113,7 +113,7 @@ def calculate_gdd ( year, tbase=10, tmax=40, latitude=None, longitude=None, \
         
     return ( temp, agdd )
 
-def plot_ndvi ( longitude, latitude ):
+def get_ndvi ( longitude, latitude, plot=False ):
     """This function plots NDVI for a given longitude and latitude, for 2001 to
     2011"""
     # Check sanity of longitude an latitude values...
@@ -128,9 +128,10 @@ def plot_ndvi ( longitude, latitude ):
         data = np.r_[ data, gdal_dataset.ReadAsArray ()[ :, iy, ix] ] 
         t_range +=  [ matplotlib.dates.datestr2num("%04d-%d-01" % (year, m )) \
             for m in range(1, 13) ]
-    plt.plot_date ( t_range, data, '-sr', label="NDVI" )
-    plt.grid ( True )
-    plt.xlabel("Date")
-    plt.ylabel("NDVI [-]")
-    plt.show()
+    if plot:
+        plt.plot_date ( t_range, data, '-sr', label="NDVI" )
+        plt.grid ( True )
+        plt.xlabel("Date")
+        plt.ylabel("NDVI [-]")
+        plt.show()
     return ( data )
