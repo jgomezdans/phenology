@@ -20,7 +20,7 @@ def fourier_model ( p, agdd, h_harm):
     used."""
     integration_time = len ( agdd )
     t = np.arange ( 1, integration_time + 1)
-    result = [ p[i]*np.cos ( 2*np.pi*t/integration_time + p[i+1] \
+    result = [ p[i]*np.cos ( 2*np.pi*t/integration_time + p[i+1]) \
         for i in xrange ( 0, n_harm, 2) ]
     return np.array ( result )
     
