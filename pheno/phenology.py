@@ -32,49 +32,44 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
 
-def mismatch_function ( p, pheno_model, ndvi, years, n_harm=3 ):
+def mismatch_function ( p, pheno_model, ndvi, agdd, years, n_harm=3 ):
     """The NDVI/Phenology model mismatch function. This can be a multi-year
-    function that will be minimised wrt to the VI observations"""
+    function that will be minimised wrt to the VI observations. This function
+    will take different phenology models, and NDVI and AGDD datasets. Note that
+    if you want to use some other temporal reference, this can be quite easily
+    be passed through instead of AGDD. ``n_harm`` is only used when pheno_model
+    is set to fourier, and controls the number of harmonics that will be used"""
     n_extra_params = 0
     if pheno_model == "quadratic":
         pheno_func = quadratic_model
-        n_params = 3
-    elif pheno_model == "fourier"
+    elif pheno_model == "fourier":
         pheno_func = fourier_model
-        n_params = 1 + 2*n_harm
         n_extra_params = 1
     elif pheno_model == "dbl_logistic":
         pheno_func = dbl_logistic_model
-        n_params = 6
+
     # output stores the predictions    
     output = []
-    # Initial solution. This will get updated with each year
-    xinit = [0,]*n_params
     for year in years:
         ndvi_i = ndvi [ (year-2001)*12:( year - 2001 + 1)*12 ]
-        ( temp, agdd ) = calculate_gdd( year, latitude=latitude, \
-            longitude=longitude )
-        t = (year-2001)*12 + np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
+        agdd_i =  agdd [ (year-2001)*365:( year - 2001 + 1)*365 ]
+        t = np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
             258, 289, 319, 350 ] )
         # We will interpolate NDVI to be daily. For this we need the following array
-        ti = (year-2001)*12 + np.arange ( 1, 366 )
+        ti = np.arange ( 1, 366 )
         # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
         # everything else easier.
         ndvid = np.interp ( ti, t, ndvi_i )
         if n_extra_params == 0:
             fitness = lambda p, ndvi_in, agdd: ndvi_in - pheno_func ( p, agdd )
-            ( xsol, msg ) = leastsq ( fitness, xinit, args=(ndvid, agdd) )
-            output.append ( pheno_func ( xsol, agdd ) )
+            oot = fitness ( p, ndvid, agdd_i )            
+            output.append ( oot )
         else:
             fitness = lambda p, ndvi_in, agdd, n_harm: \
                     ndvi_in - pheno_func ( p, agdd, n_harm=n_harm )
-            ( xsol, msg ) = leastsq ( fitness, xinit, args=(ndvid, agdd, \
-                            n_harm ) )
-            output.append ( pheno_func ( xsol, agdd, n_harm=n_harm ) )
-        # We can use the solution as the next year's initialisation value
-        # This doesn't force this solution, but should be quicker than starting
-        # from an arbitrary point
-        xinit = xsol.copy()
+            oot = fitness ( p, ndvid, agdd_i, n_harm )            
+            output.append ( oot )
+    return output
         
         
 def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
@@ -136,7 +131,7 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
     return ( agdd, ndvi, xsol, msg )
     
     
-def calculate_gdd ( year=None, , tbase=10, tmax=40, \
+def calculate_gdd ( year=None, tbase=10, tmax=40, \
         latitude=None, longitude=None, \
         fname="/data/geospatial_20/ucfajlg/meteo/temp_2m_unscaled.tif" ):
     """This function calculates the Growing Degree Days for a given year from
