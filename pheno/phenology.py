@@ -9,6 +9,66 @@ from osgeo import gdal
 
 from pheno_utils import *
 
+def quadratic_model ( p, agdd ):
+    """A quadratic phenology model. Takes in a lenght 3 vector with parameters
+    for a quadratic function of AGDD ``agdd``"""
+    return p[0]*agdd**2 + p[1]*agdd + p[2]
+    
+def fourier_model ( p, agdd, h_harm=3 ):
+    """A simple Fourier model Takes in the Fourier coefficients and phase and 
+    uses AGDD ``agdd`` as its time axis. By default ``n_harm`` harmonics are 
+    used."""
+    integration_time = len ( agdd )
+    t = np.arange ( 1, integration_time + 1)
+    result = [ p[i]*np.cos ( 2*np.pi*t/integration_time + p[i+1] \
+        for i in xrange ( 0, n_harm, 2) ]
+    return np.array ( result )
+    
+def dbl_logistic_model ( p, agdd ):
+    """A double logistic model, as in Sobrino and Juliean, or Zhang et al"""
+    return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
+                          1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
+                          
+def fit_phenology_model ( longitude, latitude, year ):
+    # These next few lines retrieve the mean daily temperature and
+    # AGDD, but with 
+    quadratic_model = lambda p, ndvi, agdd: \
+            p[0]*agdd**2 + p[1]*agdd + p[2]
+    fourier_model = lambda p, ndvi, agdd, n_harm:
+            ndvi - 
+    ( temp, agdd ) = calculate_gdd( year, latitude=latitude, \
+        longitude=longitude )
+    # Grab NDVI. Only the first year
+    ndvi = plot_ndvi (  longitude, latitude )[ (year-2001)*12:(year-2002)*12 ]
+    # Need to clear plot
+    plt.clf()
+    # The following array are the mid-month DoY dates to which NDVI could relate
+    # to
+    t = np.array([ 16,  44,  75, 105, 136, 166, 197, 228, 258, 289, 319, 350])
+    # We will interpolate NDVI to be daily. For this we need the following array
+    ti = np.arange ( 1, 366 )
+    # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
+    # everything else easier.
+    ndvid = np.interp ( ti, t, ndvi )
+    # The fitness function is defined as a lambda function for simplicity
+    if pheno_model == "quadratic":
+        fitf = lambda p, ndvid, agdd: \
+                ndvid - quadratic_model ( p, agdd )
+        # Fit fitf using leastsq, with an initial guess of 0, 0, 0
+        ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd) )
+    plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
+    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
+    '-g', label="Fit" )
+    # Now, try a different base temperature
+    ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, tbase=-5,latitude=57, \
+    longitude=86 )
+    ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
+    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
+    '-b', label="Fit (-5)" )
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.grid ( True )
+    
 def calculate_gdd ( year, tbase=10, tmax=40, latitude=None, longitude=None, \
         fname="/data/geospatial_20/ucfajlg/meteo/temp_2m_unscaled.tif" ):
     """This function calculates the Growing Degree Days for a given year from

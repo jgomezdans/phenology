@@ -195,16 +195,17 @@ a simple quadratic function of AGDD:
    # This is a simple linear interpolator
    ndvid = np.interp ( ti, t, ndvi )
    # The fitness function is defined as a lambda function for simplicity
-   fitf = lambda p: ndvid -( p[0]*agdd_tomsk*agdd_tomsk +p[1]*agdd_tomsk+p[2])
+   fitf = lambda p, ndvid, agdd: \
+        ndvid -( p[0]*agdd**2 +p[1]*agdd+p[2])
    # Fit fitf using leastsq, with an initial guess of 0, 0, 0
-   ( xsol, msg ) = leastsq ( fitf, [0, 0,0] )
+   ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
    plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
        '-g', label="Fit" )
    # Now, try a different base temperature
    ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, tbase=-5,latitude=57, \
         longitude=86 )
-   ( xsol, msg ) = leastsq ( fitf, [0, 0,0] )
+   ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
       '-b', label="Fit (-5)" )
    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
@@ -240,9 +241,9 @@ function can be expressed as a sum of increasing frequency sine waves:
     
 .. math::
     
-    NDVI(t) = \overbar{NDVI}(t) + sum_{i=1}^{N/2}A_{i}\cos(2\pi i t/N) + \phi_{i}
+    NDVI(t) = \overline{NDVI}(t) + \sum_{i=1}^{N/2}A_{i}\cos(2\pi i t/N) + \phi_{i}
     
-where :math:`\overbar{NDVI}(t)` is the mean NDVI value within the period of 
+where :math:`\overline{NDVI}(t)` is the mean NDVI value within the period of 
 interest :math:`(0,N)`. :math:`A_{i}` and :math:`\phi_{i}` are the magnitude and
 phase of the :math:`i`-th harmonic, respectively. Usually, only a few terms of the
 summation are required to produce a reasonable fit to the observations. An added
