@@ -14,7 +14,7 @@ def quadratic_model ( p, agdd ):
     for a quadratic function of AGDD ``agdd``"""
     return p[0]*agdd**2 + p[1]*agdd + p[2]
     
-def fourier_model ( p, agdd, h_harm=3 ):
+def fourier_model ( p, agdd, h_harm):
     """A simple Fourier model Takes in the Fourier coefficients and phase and 
     uses AGDD ``agdd`` as its time axis. By default ``n_harm`` harmonics are 
     used."""
@@ -29,13 +29,10 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
                           
-def fit_phenology_model ( longitude, latitude, year ):
+def fit_phenology_model ( longitude, latitude, year, \
+            tbase=10, tmax=40, n_harm=3 ):
     # These next few lines retrieve the mean daily temperature and
     # AGDD, but with 
-    quadratic_model = lambda p, ndvi, agdd: \
-            p[0]*agdd**2 + p[1]*agdd + p[2]
-    fourier_model = lambda p, ndvi, agdd, n_harm:
-            ndvi - 
     ( temp, agdd ) = calculate_gdd( year, latitude=latitude, \
         longitude=longitude )
     # Grab NDVI. Only the first year
@@ -51,20 +48,29 @@ def fit_phenology_model ( longitude, latitude, year ):
     # everything else easier.
     ndvid = np.interp ( ti, t, ndvi )
     # The fitness function is defined as a lambda function for simplicity
+    plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
     if pheno_model == "quadratic":
         fitf = lambda p, ndvid, agdd: \
                 ndvid - quadratic_model ( p, agdd )
         # Fit fitf using leastsq, with an initial guess of 0, 0, 0
         ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd) )
-    plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
-    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
-    '-g', label="Fit" )
-    # Now, try a different base temperature
-    ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, tbase=-5,latitude=57, \
-    longitude=86 )
-    ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
-    plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
-    '-b', label="Fit (-5)" )
+        plt.plot ( ti, quadratic_model ( xsol, agdd) \
+            '-g', label="Quadratic Fit" )
+    elif pheno_model == "fourier":
+        n_harm = 3
+        fitf = lambda p, agdd, n_harm : \
+                ndvi - fourier_model ( p, agdd, n_harm=n_harm )
+        ( xsol, msg ) = leastsq ( fitf, [0,]*2*n_harm, args=(ndvid, agdd, \
+            n_harm) )
+        plt.plot ( ti, fourier_model ( xsol, agdd, n_harm) \
+                '-g', label="Fourier Fit" )
+    elif pheno_model == "dbl_logistic":
+        fitf = lambda, p, agdd: \
+                ndvi - dbl_logistic_model ( p, agdd )
+        ( xsol, msg ) = leastsq ( fitf, [0,]*6, args=( ndvid, agdd ) )
+        plt.plot ( ti, fourier_model ( xsol, agdd ) \
+            '-g', label="Logistic Fit" )
+        
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
     plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
     plt.grid ( True )
