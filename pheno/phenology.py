@@ -54,7 +54,7 @@ def fit_phenology_model ( longitude, latitude, year, \
                 ndvid - quadratic_model ( p, agdd )
         # Fit fitf using leastsq, with an initial guess of 0, 0, 0
         ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd) )
-        plt.plot ( ti, quadratic_model ( xsol, agdd) \
+        plt.plot ( ti, quadratic_model ( xsol, agdd), \
             '-g', label="Quadratic Fit" )
     elif pheno_model == "fourier":
         n_harm = 3
@@ -62,13 +62,13 @@ def fit_phenology_model ( longitude, latitude, year, \
                 ndvi - fourier_model ( p, agdd, n_harm=n_harm )
         ( xsol, msg ) = leastsq ( fitf, [0,]*2*n_harm, args=(ndvid, agdd, \
             n_harm) )
-        plt.plot ( ti, fourier_model ( xsol, agdd, n_harm) \
+        plt.plot ( ti, fourier_model ( xsol, agdd, n_harm), \
                 '-g', label="Fourier Fit" )
     elif pheno_model == "dbl_logistic":
-        fitf = lambda, p, agdd: \
+        fitf = lambda p, agdd: \
                 ndvi - dbl_logistic_model ( p, agdd )
         ( xsol, msg ) = leastsq ( fitf, [0,]*6, args=( ndvid, agdd ) )
-        plt.plot ( ti, fourier_model ( xsol, agdd ) \
+        plt.plot ( ti, fourier_model ( xsol, agdd ), \
             '-g', label="Logistic Fit" )
         
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
