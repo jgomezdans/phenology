@@ -107,6 +107,7 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
     ( temp, agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
             latitude=latitude, longitude=longitude )
     xinit = [0.5,] * n_params
+    # Dbl_logistic might require sensible starting point
     ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
         args=( pheno_func, ndvi_all, agdd_all, years, n_harm ) )
     fwd_model = []
