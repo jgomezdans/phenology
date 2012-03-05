@@ -32,21 +32,13 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
 
-def mismatch_function ( p, pheno_model, ndvi, agdd, years, n_harm=3 ):
+def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
     """The NDVI/Phenology model mismatch function. This can be a multi-year
     function that will be minimised wrt to the VI observations. This function
     will take different phenology models, and NDVI and AGDD datasets. Note that
     if you want to use some other temporal reference, this can be quite easily
     be passed through instead of AGDD. ``n_harm`` is only used when pheno_model
     is set to fourier, and controls the number of harmonics that will be used"""
-    n_extra_params = 0
-    if pheno_model == "quadratic":
-        pheno_func = quadratic_model
-    elif pheno_model == "fourier":
-        pheno_func = fourier_model
-        n_extra_params = 1
-    elif pheno_model == "dbl_logistic":
-        pheno_func = dbl_logistic_model
 
     # output stores the predictions    
     output = []
@@ -75,8 +67,18 @@ def mismatch_function ( p, pheno_model, ndvi, agdd, years, n_harm=3 ):
 def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
             tbase=10, tmax=40, n_harm=3 ):
     from scipy.optimize import leastsq
-    # These next few lines retrieve the mean daily temperature and
-    # AGDD, but with
+
+    # Find the number of parameters and a pointer to the phenology model func.
+    if pheno_model == "quadratic":
+        pheno_func = quadratic_model
+        n_params = 3 # 3 terms
+    elif pheno_model == "fourier":
+        pheno_func = fourier_model
+        n_params = 1 + n_harm*2 # 1 DC term + 1 phase + 1 magnitude per harmonic
+    elif pheno_model == "dbl_logistic":
+        n_params = 6 # 6 terms
+        pheno_func = dbl_logistic_model
+
     # This test is to see whether we get a list of years, or a single year
     if isinstance ( year, list ):
         years = year
@@ -85,44 +87,12 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
     else:
         raise TypeError, "year has to be a scalar or  list"
     ndvi_all = get_ndvi (  longitude, latitude )
-    pdb.set_trace()
-    for year in years:
-        ndvi = ndvi_all [ (year-2001)*12:( year - 2001 + 1)*12 ]
-        ( temp, agdd ) = calculate_gdd( year, latitude=latitude, \
-            longitude=longitude )
-        # Grab NDVI. Only the first year
-        # Need to clear plot
-        plt.clf()
-        # The following array are the mid-month DoY dates to which NDVI could relate
-        # to
-        t = (year-2001)*12 + np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
-                258, 289, 319, 350 ] )
-        # We will interpolate NDVI to be daily. For this we need the following array
-        ti = (year-2001)*12 + np.arange ( 1, 366 )
-        # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
-        # everything else easier.
-        ndvid = np.interp ( ti, t, ndvi )
-        # The fitness function is defined as a lambda function for simplicity
-        plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
-        if pheno_model == "quadratic":
-            fitf = lambda p, ndvid, agdd: \
-                    ndvid - quadratic_model ( p, agdd )
-            # Fit fitf using leastsq, with an initial guess of 0, 0, 0
-            ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd) )
-            plt.plot ( ti, quadratic_model ( xsol, agdd), \
-                '-g', label="Quadratic Fit" )
-        elif pheno_model == "fourier":
-            fitf = lambda p, ndvi, agdd, n_harm : \
-                    ndvi - fourier_model ( p, agdd, n_harm=n_harm )
-            ( xsol, msg ) = leastsq ( fitf, [0,]*(2*n_harm+1), \
-                    args=(ndvid, agdd, n_harm) )
-            plt.plot ( ti, fourier_model ( xsol, agdd, n=_harmn_harm), \
-                    '-g', label="Fourier Fit" )
-        elif pheno_model == "dbl_logistic":
-            fitf = lambda p, ndvi, agdd: \
-                    ndvi - dbl_logistic_model ( p, agdd )
-            ( xsol, msg ) = leastsq ( fitf, [0,]*6, args=( ndvid, agdd ) )
-            plt.plot ( ti, fourier_model ( xsol, agdd ), \
+    xinit = [0,] * n_params
+    ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
+        args=( pheno_func, ndvi_all, agdd_all, years, n_harm=3 ) )
+
+    
+    plt.plot ( ti, fourier_model ( xsol, agdd ), \
                 '-g', label="Logistic Fit" )
         
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
