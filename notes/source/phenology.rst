@@ -39,7 +39,12 @@ result in a mixture of species. A further complication is that the VI is a
 combination of soil (and snow) reflectance and vegetation biochemical composition
 and structure, so it is hard to associate any point in a typical trajectory
 with particular phenological events such as budburst or leaf fall. In these
-cases, simple phenology models can be used to interpret the signal.
+cases, simple phenology models can be used to interpret the signal. In effect, 
+these models provide mathematical functions for that adequately fit the observed
+vegetation index. Points of interest in these trajectories can then be easily 
+calculated (for example, location of the maximum VI value, inflexion points 
+indicating start and end of the green period, total lenght of photosynthetically
+active period, etc.).
 
 Plotting NDVI temporal trajectories
 -------------------------------------
@@ -83,58 +88,6 @@ differences are.
 Simple phenology models
 =========================
 
-Phenology has been found to be very responsive to temperature. *Growing degree
-days* are a useful way to define phenological events, rather than calendar days, 
-as the latter are rather arbitrary. Growing degree days accumulate anytime the 
-average temperature for the day is more than a certain base temperature. This 
-allows for some normalisation of timing of events across latitudinal ranges, for
-example. 
-
-.. todo::
-    
-   Put a few references on climate and phenology and how it impacts C cycle.
-
-Accessing the AGDD data
-------------------------
-
-Data from the `ERA interim archive <http://data-portal.ecmwf.int/data/d/interim_daily/>`_
-have been prepared. The data available for this practial is the mean daily 
-temperature. Some functions have been provided for you to access the data easily:
-
-.. plot::
-   :include-source: 
-  
-   # Import some libraries, in case you haven't yet imported them
-   import matplotlib.pyplot as plt
-   import numpy as np
-   from phenology import *
-   # These next few lines retrieve the mean daily temperature and
-   # AGDD for the three sites mentioned above
-   ( temp_hainich, agdd_hainich ) = calculate_gdd( 2005, \
-            latitude=51, longitude=10 )
-   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, \
-            latitude=57, longitude=86 )
-   ( temp_tumbarumba, agdd_tumbarumba ) = calculate_gdd( 2005, \
-            latitude=-35, longitude=148 )
-   # Temporal range for plots
-   t_range =  np.arange ( 1, 366 )
-   # First subplot is Hainich (DE)
-   agdd_plots ( 3, 1, 10, 40, t_range, temp_hainich, agdd_hainich )
-   agdd_plots ( 3, 2, 10, 40, t_range, temp_tomsk, agdd_tomsk )
-   agdd_plots ( 3, 3, 10, 40, t_range, temp_tumbarumba, agdd_tumbarumba )
-   plt.xlabel("DoY/2005")
-   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
-   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-   plt.show()
-            
-Examine the previous plots, noting particularly the inflexion points in the 
-AGDD curve, and how they relate to the base and maximum mean daily temperatures
-(shown in the grey area). Also not how for the Tumbarumba site, there is a 
-seasonality with respect to the Northern Hemisphere sites. 
-
-Phenology models
------------------
-
 Inspection of typical evolution of vegetation indices like the one carried out
 above suggest that a simple phenology model that goes from a minimum to a maximum
 and then decreases again may be suitable, at least for the Northern Hemisphere.
@@ -175,11 +128,23 @@ a simple quadratic function of time:
    plt.show()     
     
 We can see that the quadratic model has some complications even fitting a simple
-NDVI profile like that of Siberia.The model, as introduced above, will also 
+NDVI profile like that of Siberia. The model, as introduced above, will also 
 struggle to cope with NDVI patterns typical of the Southern Hemisphere (unless
 a temporal shift is introduced). These limitations have lead to the development
 of more complex and robust methods. 
 
+In the previous code snippet, all the work is done by ``fit_phenology_model``. 
+This function returns a Python tuple with the following elements:
+    
+0. AGDD (degrees) for the 11 years of data. Daily data.
+1. NDVI for the 11 years of data. Data have been linearly interpolated to daily.
+2. Optimal fit parameters 
+3. Output message from ``leastsq`` (see `here <http://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html#least-square-fitting-leastsq>`_ for more information)
+4. Predicted NDVI for 11 years from using the Optimal fit parameters.
+
+We can also fit several years with the same parameters. Instead of specifying
+``[2001]``, we can specify a list with the years we want to fit together, such as
+``[2001, 2002, 2003, 2004]``. 
 
 Other methods to fit a model to observations of NDVI rely on Fourier analysis
 ideas. Fourier analysis states that within a closed interval, any periodic
@@ -232,23 +197,61 @@ a more in-depht analysis, see e.g. `Moody and Johnson (2001)`_
     print retval[-3] # Print out the fit parameters
     plt.show()
    
-This code demonstrates that the fit using the Fourier model is good
+This code demonstrates that the fit using the Fourier model is good, as the 
+VI trajectory we are using can be well approximated by a sum of sinusoids. Note
+that since in this case we also solve for phase shifts, this model fits other
+type of phenologies, such as the Tumbarumba site, quite well:
+    
+.. plot::
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 148, -35, [2001], pheno_model="fourier")
+    plt.subplot ( 2, 1, 1 )
+    plt.plot ( retval[1], '-r', label="MODIS NDVI" )
+    plt.plot ( retval[-1], '-g', label="Predicted" )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.grid ( True )
+    plt.ylabel("NDVI")
+    plt.subplot ( 2, 1, 2 )
+    plt.plot ( retval[0], '-r' )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.xlabel ("Time [DoY since 1/1/2001]")
+    plt.ylabel ("AGDD")
+    print retval[-3] # Print out the fit parameters
+    plt.show()
+   
 
-Other more complex models have been developed in the literature, that make use
+Other models have been developed in the literature, that make use
 of different temporal template shapes (such as asymetric Gaussian functions, or
 the double logistic function). A double logistic model (after e.g. 
 `Zhang et al. (2003)`_ or `Sobrino and Julien (2011)`_ ) is given by 
 
 .. math::
     
-    NDVI(t) =   NDVI_{0} + \DeltaNDVI\cdot
-    \left[\frac{1}{1+\exp(-m_{s}(AGDD-S))} + 
-    \frac{1}{1+\exp(m_{A}(AGDD-A))} - 1\right]
-    
-In comparison with the quadratic model, the double logistic model will provide a
-more flexible fit to the data by virtue of having 6 parameters (the :math:`NDVI_{0}`
-and :math:`NDVI_{M}` terms are maximum and minimum NDVI, and can be readily 
-estimated from the time series).
+   \begin{align}
+   NDVI(t) &= NDVI_{0} + \Delta NDVI\cdot\left[\frac{1}{1+\exp(m_{s}(t-s))}\right.  \nonumber\\
+   &+ \left. \frac{1}{1+\exp(m_{a}(t-a))} - 1 \right]\nonumber
+   \end{align}    
+   
+The model effectively has 6 parameters, of which two relate to the variation in
+the vegetation index (:math:`NDVI_{0}`, the minimum value of the VI, and
+:math:`\Delta NDVI`, the difference between maximum and minimum NDVI). The other
+parameters relate to the shape of the ascending logistic function that models
+greening up (:math:`m_{s}` and :math:'s') and the onset of senescence 
+(:math:`m_{a}` and :math:`a`). We can relate :math:`s` and :math:`a` to the
+beginning and end of the photosynthetically active period (i.e., shift in time),
+and :math:`m_s` and :math:`m_a` to the location of the inflexion point in the
+logistic curves.  
 
 .. plot::
     :include-source:
@@ -283,8 +286,50 @@ Relating phenology to meteorological forcings
 ================================================
 
 In the previous section we have fitted phenological models to observations of 
-vegetation indices. We can use the parameters that we recovered to 
-    
+vegetation indices. We can use the parameters that we recovered for each year to
+relate them to meteorological observations, or to look for trends. To this end,
+we shall be using as a meteorological 
+
+
+Accessing the AGDD data
+------------------------
+
+Data from the `ERA interim archive <http://data-portal.ecmwf.int/data/d/interim_daily/>`_
+have been prepared. The data available for this practial is the mean daily 
+temperature. Some functions have been provided for you to access the data easily:
+
+.. plot::
+   :include-source: 
+  
+   # Import some libraries, in case you haven't yet imported them
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from phenology import *
+   # These next few lines retrieve the mean daily temperature and
+   # AGDD for the three sites mentioned above
+   ( temp_hainich, agdd_hainich ) = calculate_gdd( 2005, \
+            latitude=51, longitude=10 )
+   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, \
+            latitude=57, longitude=86 )
+   ( temp_tumbarumba, agdd_tumbarumba ) = calculate_gdd( 2005, \
+            latitude=-35, longitude=148 )
+   # Temporal range for plots
+   t_range =  np.arange ( 1, 366 )
+   # First subplot is Hainich (DE)
+   agdd_plots ( 3, 1, 10, 40, t_range, temp_hainich, agdd_hainich )
+   agdd_plots ( 3, 2, 10, 40, t_range, temp_tomsk, agdd_tomsk )
+   agdd_plots ( 3, 3, 10, 40, t_range, temp_tumbarumba, agdd_tumbarumba )
+   plt.xlabel("DoY/2005")
+   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+   plt.show()
+            
+Examine the previous plots, noting particularly the inflexion points in the 
+AGDD curve, and how they relate to the base and maximum mean daily temperatures
+(shown in the grey area). Also not how for the Tumbarumba site, there is a 
+seasonality with respect to the Northern Hemisphere sites. 
+
+
 .. _De Beurs and Henebry (2008): http://geography.vt.edu/deBeurs_Henebry_JClimate.pdf
 
 .. _Sobrino and Julien (2011): http://www.uv.es/juy/Doc/Sobrino_GIMMS-global-trends_IJRS_2011.pdf
