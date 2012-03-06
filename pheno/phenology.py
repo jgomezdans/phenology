@@ -194,7 +194,8 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
         
     return ( temp, agdd )
 
-def get_ndvi ( longitude, latitude, plot=False ):
+def get_ndvi ( longitude, latitude, \
+        plot=False,  data_dir="/data/geospatial_20/ucfajlg/MODIS/output" ):
     """This function returns the  NDVI for a given longitude and latitude, 
     for 2001 to 2011. Optionally, It will also plot the data"""
     # Check sanity of longitude an latitude values...
@@ -204,8 +205,7 @@ def get_ndvi ( longitude, latitude, plot=False ):
     data = []
     t_range = []
     for year in xrange ( 2001, 2012 ):
-        gdal_dataset = gdal.Open ( "/data/geospatial_20/ucfajlg/MODIS/" + \
-            "output/NDVI_%04d.tif" % year )
+        gdal_dataset = gdal.Open ( "%s/NDVI_%04d.tif" % ( data_dir, year ) )
         data = np.r_[ data, gdal_dataset.ReadAsArray ()[ :, iy, ix] ] 
         t_range +=  [ matplotlib.dates.datestr2num("%04d-%d-01" % (year, m )) \
             for m in range(1, 13) ]
