@@ -166,7 +166,8 @@ Finally, frequency-domain analysis is fairly robust against noise. However, ther
 are some shortcomings: data gaps need to be filled in or "padded", and the
 frequency at which one can extract information is governed by the periodicity of
 the data, wihch in our case is monthly. Also, fast events might be blurred. For
-a more in-depht analysis, see e.g. `Moody and Johnson (2001)`_
+a more in-depht analysis, see e.g. `Moody and Johnson (2001)`_, and the related
+slightly more sophisticated method presented in `Hernance et al. (2007)`_.
 
 .. plot::
     :include-source:
@@ -238,10 +239,8 @@ the double logistic function). A double logistic model (after e.g.
 
 .. math::
     
-   \begin{align}
-   NDVI(t) &= NDVI_{0} + \Delta NDVI\cdot\left[\frac{1}{1+\exp(m_{s}(t-s))}\right.  \nonumber\\
-   &+ \left. \frac{1}{1+\exp(m_{a}(t-a))} - 1 \right]\nonumber
-   \end{align}    
+   NDVI(t) &= NDVI_{0} + \Delta NDVI\cdot\left[\frac{1}{1+\exp(m_{s}(t-s))}+  \frac{1}{1+\exp(m_{a}(t-a))} - 1 \right]
+   
    
 The model effectively has 6 parameters, of which two relate to the variation in
 the vegetation index (:math:`NDVI_{0}`, the minimum value of the VI, and
@@ -327,11 +326,117 @@ temperature. Some functions have been provided for you to access the data easily
 Examine the previous plots, noting particularly the inflexion points in the 
 AGDD curve, and how they relate to the base and maximum mean daily temperatures
 (shown in the grey area). Also not how for the Tumbarumba site, there is a 
-seasonality with respect to the Northern Hemisphere sites. 
+seasonality shift with respect to the Northern Hemisphere sites. 
 
+A way to explore this is to use the fitted models and look for their inflexion
+points. These smooth functionals are easy to inspect than the noisy NDVI series
+(particularly if you were using daily data with no angular correction). You can
+find an analytic expression for the onset of greenness and start of senescence
+as (respectively) the maximum and minimum value of the first derivative.
+
+.. plot::
+    :include-source:
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 86, 57, [2001], pheno_model="dbl_logistic")
+    # Plot the fitted curve for year 2001
+    plt.plot ( retval[-1][:365], '-r', label="Fit")
+    # Plot the observations of NDVI
+    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    # Onset of senescence is the minimum of the derivative 
+    doy_senesc = np.diff(retval[-1][:365]).argmin()
+    # I get 297 for this
+    # Onset of greenness is the minimum of the derivative 
+    doy_green = np.diff(retval[-1][:365]).argmax()
+    # I get 109 for my example
+    plt.axvline ( doy_green, ymin=0, ymax=0.95, color='g', lw=1.5 )
+    plt.axvline ( doy_senesc, ymin=0, ymax=0.95, color='k', lw=1.5 )
+    plt.grid ( True )
+    plt.xlabel("DoY/2005")
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.title ( "Tomsk \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+        ( retval[0][doy_green], retval[0][doy_senesc], \
+        retval[0][doy_senesc] - retval[0][doy_green] ) ) 
+    plt.show()
+
+.. plot::
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 10, 51, [2001], pheno_model="dbl_logistic")
+    # Plot the fitted curve for year 2001
+    plt.plot ( retval[-1][:365], '-r', label="Fit")
+    # Plot the observations of NDVI
+    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    # Onset of senescence is the minimum of the derivative 
+    doy_senesc = np.diff(retval[-1][:365]).argmin()
+    # I get 297 for this
+    # Onset of greenness is the minimum of the derivative 
+    doy_green = np.diff(retval[-1][:365]).argmax()
+    # I get 109 for my example
+    plt.axvline ( doy_green, ymin=0, ymax=0.95, color='g', lw=1.5 )
+    plt.axvline ( doy_senesc, ymin=0, ymax=0.95, color='k', lw=1.5 )
+    plt.grid ( True )
+    plt.xlabel("DoY/2005")
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.title ( "Hainich \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+        ( retval[0][doy_green], retval[0][doy_senesc], \
+        retval[0][doy_senesc] - retval[0][doy_green] ) ) 
+    plt.show()
+
+
+.. plot::
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 148, -35, [2001], pheno_model="dbl_logistic")
+    # Plot the fitted curve for year 2001
+    plt.plot ( retval[-1][:365], '-r', label="Fit")
+    # Plot the observations of NDVI
+    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    # Onset of senescence is the minimum of the derivative 
+    doy_senesc = np.diff(retval[-1][:365]).argmin()
+    # I get 297 for this
+    # Onset of greenness is the minimum of the derivative 
+    doy_green = np.diff(retval[-1][:365]).argmax()
+    # I get 109 for my example
+    plt.axvline ( doy_green, ymin=0, ymax=0.95, color='g', lw=1.5 )
+    plt.axvline ( doy_senesc, ymin=0, ymax=0.95, color='k', lw=1.5 )
+    plt.grid ( True )
+    plt.xlabel("DoY/2005")
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.title ( "Tumbarumba \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+        ( retval[0][doy_green], retval[0][doy_senesc], \
+        retval[0][doy_senesc] - retval[0][doy_green] ) ) 
+    plt.show()
 
 .. _De Beurs and Henebry (2008): http://geography.vt.edu/deBeurs_Henebry_JClimate.pdf
-
+.. _Hernance et al. (2007): http://ieeexplore.ieee.org//xpls/abs_all.jsp?arnumber=4305366
 .. _Sobrino and Julien (2011): http://www.uv.es/juy/Doc/Sobrino_GIMMS-global-trends_IJRS_2011.pdf
 
 .. _Zhang et al. (2003): http://www.sciencedirect.com/science/article/pii/S0034425702001359
