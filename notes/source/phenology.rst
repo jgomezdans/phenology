@@ -350,7 +350,7 @@ as (respectively) the maximum and minimum value of the first derivative.
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
-    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    plt.plot ( retval[1][:365], '-g', label="Obs")
     # Onset of senescence is the minimum of the derivative 
     doy_senesc = np.diff(retval[-1][:365]).argmin()
     # I get 297 for this
@@ -363,7 +363,7 @@ as (respectively) the maximum and minimum value of the first derivative.
     plt.xlabel("DoY/2005")
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
     plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-    plt.title ( "Tomsk \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+    plt.title ( "Tomsk \nAGDD OG: %8.1f AGDD OS: %8.1f AGDD AP:%8.1f" % \
         ( retval[0][doy_green], retval[0][doy_senesc], \
         retval[0][doy_senesc] - retval[0][doy_green] ) ) 
     plt.show()
@@ -383,7 +383,7 @@ as (respectively) the maximum and minimum value of the first derivative.
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
-    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    plt.plot ( retval[1][:365], '-g', label="Obs")
     # Onset of senescence is the minimum of the derivative 
     doy_senesc = np.diff(retval[-1][:365]).argmin()
     # I get 297 for this
@@ -396,7 +396,7 @@ as (respectively) the maximum and minimum value of the first derivative.
     plt.xlabel("DoY/2005")
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
     plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-    plt.title ( "Hainich \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+    plt.title ( "Hainich \nAGDD OG: %8.1f AGDD OS: %8.1f AGDD AP:%8.1f" % \
         ( retval[0][doy_green], retval[0][doy_senesc], \
         retval[0][doy_senesc] - retval[0][doy_green] ) ) 
     plt.show()
@@ -413,11 +413,11 @@ as (respectively) the maximum and minimum value of the first derivative.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 148, -35, [2001], pheno_model="dbl_logistic")
+    retval = fit_phenology_model( 148, -35, [2001], pheno_model="fourier", n_harm=5)
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
-    plt.plot ( retval[-1][:365], '-g', label="Obs")
+    plt.plot ( retval[1][:365], '-g', label="Obs")
     # Onset of senescence is the minimum of the derivative 
     doy_senesc = np.diff(retval[-1][:365]).argmin()
     # I get 297 for this
@@ -430,7 +430,7 @@ as (respectively) the maximum and minimum value of the first derivative.
     plt.xlabel("DoY/2005")
     plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
     plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-    plt.title ( "Tumbarumba \nAGDD OG: %f AGDD OS: %f AGDD AP:%f" % \
+    plt.title ( "Tumbarumba \nAGDD OG: %8.1f AGDD OS: %8.1f AGDD AP:%8.1f" % \
         ( retval[0][doy_green], retval[0][doy_senesc], \
         retval[0][doy_senesc] - retval[0][doy_green] ) ) 
     plt.show()
