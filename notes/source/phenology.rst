@@ -27,7 +27,7 @@ typical temporal trajectories can be used to track the temporal development of
 vegetation and can be related to phenology measurements in the ground. 
 
 .. figure:: ndvi_annual_trend.png
-   :scale: 50%
+   :scale: 25%
    :alt: A typical NDVI profile
    
    The monthly NDVI trajectory for a site located in the UK for 2002.

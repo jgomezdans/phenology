@@ -32,23 +32,6 @@ def dbl_logistic_model ( p, agdd ):
     return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
 
-def interpolate_daily( ndvi ):
-    
-    ndvi_daily = []
-    for year in xrange ( 2001, 2012):
-        ndvi_i = ndvi [ (year-2001)*12:( year - 2001 + 1)*12 ]
-        t = np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
-        258, 289, 319, 350 ] )
-        # We will interpolate NDVI to be daily. For this we need the following array
-        if year%4 == 0:
-            ti = np.arange ( 1, 367 ) # Leap year
-        else:
-            ti = np.arange ( 1, 366 )
-        # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
-        # everything else easier.
-        ndvid = np.interp ( ti, t, ndvi_i )
-        ndvi_daily = np.r_[ ndvi_daily, ndvid ]
-    return ndvi_daily
                           
 def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
     """The NDVI/Phenology model mismatch function. This can be a multi-year

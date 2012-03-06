@@ -6,6 +6,24 @@ import matplotlib.dates
 import numpy as np
 from osgeo import gdal
 
+def interpolate_daily( ndvi ):
+    """A function that interpolates monthly NDVI values to daily, assuming the
+    data refers to the period 2001 to 2011."""
+    ndvi_daily = []
+    for year in xrange ( 2001, 2012):
+        ndvi_i = ndvi [ (year-2001)*12:( year - 2001 + 1)*12 ]
+        t = np.array( [ 16,  44,  75, 105, 136, 166, 197, 228,\
+        258, 289, 319, 350 ] )
+        # We will interpolate NDVI to be daily. For this we need the following array
+        if year%4 == 0:
+            ti = np.arange ( 1, 367 ) # Leap year
+        else:
+            ti = np.arange ( 1, 366 )
+        # This is a simple linear interpolator. Strictly, *NOT* needed, but makes
+        # everything else easier.
+        ndvid = np.interp ( ti, t, ndvi_i )
+        ndvi_daily = np.r_[ ndvi_daily, ndvid ]
+    return ndvi_daily
 
 def pixel_loc ( longitude, latitude ):
     """This function gets the pixel location from a given longitude and latitude.
