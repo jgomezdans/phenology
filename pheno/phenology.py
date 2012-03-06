@@ -23,13 +23,15 @@ def fourier_model ( p, agdd, n_harm):
     integration_time = len ( agdd )
     t = np.arange ( 1, integration_time + 1)
     result = t*.0 + p[0]
-    for i in xrange ( 1, n_harm*2, 2 ):
-        result += p[i]*np.cos ( 2*np.pi*t/integration_time + p[i+1] ) 
+    for i in xrange ( 1, n_harm*4, 4 ):
+        result =result + p[i]*np.cos ( 2.0*np.pi*t/integration_time + p[i+1] ) \
+               + p[i+2]*np.sin ( 2.0*np.pi*t/integration_time + p[i+3] )    
+    
     return result
     
 def dbl_logistic_model ( p, agdd ):
     """A double logistic model, as in Sobrino and Juliean, or Zhang et al"""
-    return p[0] + p[1]* ( 1./(1+np.exp(-p[2]*(agdd-p[3]))) + \
+    return p[0] + p[1]* ( 1./(1+np.exp(p[2]*(agdd-p[3]))) + \
                           1./(1+np.exp(-p[4]*(agdd-p[5])))  - 1 )
 
                           
@@ -64,17 +66,20 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
     return np.array(output).squeeze()
         
         
-def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
-            tbase=10, tmax=40, n_harm=3 ):
+def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
+            xinit=None, tbase=10, tmax=40, n_harm=3 ):
+    """This function fits a phenology model of choice for a given location and
+    time period. The user can also modify the base and maximum temperature for
+    AGDD calculations, as well as the number of harmonics used by the Fourier
+    phenology model."""
     from scipy.optimize import leastsq
-
     # Find the number of parameters and a pointer to the phenology model func.
     if pheno_model == "quadratic":
         pheno_func = quadratic_model
         n_params = 3 # 3 terms
     elif pheno_model == "fourier":
         pheno_func = fourier_model
-        n_params = 1 + n_harm*2 # 1 DC term + 1 phase + 1 magnitude per harmonic
+        n_params = 1 + n_harm*4 # 1 DC term + 2 phase + 2 magnitude per harmonic
     elif pheno_model == "dbl_logistic":
         n_params = 6 # 6 terms
         pheno_func = dbl_logistic_model
@@ -87,24 +92,48 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model="quadratic", \
     else:
         raise TypeError, "year has to be a scalar or  list"
     ndvi_all = get_ndvi (  longitude, latitude )/10000.
-    ( temp, agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
-            latitude=latitude, longitude=longitude )
-    xinit = [0.5,] * n_params
+
+    ( temp,agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
+        latitude=latitude, longitude=longitude )
+    t_axis = []
+    for y in xrange ( 2001, 2012 ):
+        if y % 4 == 0:
+            t_axis = np.r_[t_axis, np.arange ( 1, 367) ]
+        else:
+            t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
+                    
+    if xinit is None:
+        # The user hasn't provided a starting guess
+        xinit = [.5,] * n_params
+        if pheno_model == "dbl_logistic":
+            xinit[0] = ndvi_all.min()
+            xinit[1] = ndvi_all.max() - ndvi_all.min()
+            xinit[2] = 0.19
+            xinit[3] = 120
+            xinit[4] = 0.13
+            xinit[5] = 200
     # Dbl_logistic might require sensible starting point
     ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
-        args=( pheno_func, ndvi_all, agdd_all, years, n_harm ) )
+        args=( pheno_func, ndvi_all, t_axis, years, n_harm ), maxfev=1000000 )
     fwd_model = []
     if pheno_model != "fourier":
         for y in xrange( 2001, 2012):
-            agdd = agdd_all [ (y-2001)*365:( y - 2001 + 1)*365 ]
-            ax = pheno_func ( xsol, agdd )
-            [fwd_model.append ( x ) for x in ax]
+            if y % 4 == 0:
+                ax = pheno_func ( xsol, np.arange(1, 367) )
+                [fwd_model.append ( x ) for x in ax]
+            else:
+                ax = pheno_func ( xsol, np.arange(1, 366) )
+                [fwd_model.append ( x ) for x in ax]
+                    
     else:
         for y in xrange( 2001, 2012):
-            agdd = agdd_all [ (y-2001)*365:( y - 2001 + 1)*365 ]
-            ax = pheno_func ( xsol, agdd, n_harm )
-            [fwd_model.append ( x ) for x in ax]
-                
+            if y % 4 == 0:
+                ax = pheno_func ( xsol, np.arange(1,367), n_harm )
+                [fwd_model.append ( x ) for x in ax]
+            else:
+                ax = pheno_func ( xsol, np.arange(1,366), n_harm )
+                [fwd_model.append ( x ) for x in ax]
+                    
     return ( agdd_all, interpolate_daily( ndvi_all ), xsol, msg, \
             np.array (fwd_model) )
     
@@ -156,7 +185,7 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
         c = np.where ( b-tbase < 0, 0, b-tbase )
         if year is None:
             agdd = np.zeros( 4017 )
-            for y in xrange ( 10 ):
+            for y in xrange ( 11 ):
                 a = c[y*365:(y+1)*365]
                 o = a.cumsum ( axis=0)
                 agdd[y*365:(y+1)*365] = o
@@ -166,8 +195,8 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
     return ( temp, agdd )
 
 def get_ndvi ( longitude, latitude, plot=False ):
-    """This function plots NDVI for a given longitude and latitude, for 2001 to
-    2011"""
+    """This function returns the  NDVI for a given longitude and latitude, 
+    for 2001 to 2011. Optionally, It will also plot the data"""
     # Check sanity of longitude an latitude values...
     assert ( longitude >= -180 and longitude <= 180 )
     assert ( latitude >= -90 and latitude <= 90 )
@@ -187,3 +216,20 @@ def get_ndvi ( longitude, latitude, plot=False ):
         plt.ylabel("NDVI [-]")
         plt.show()
     return ( data )
+    
+def agdd_plots ( nplots, iplot, tbase, tmax, t_range, temp, agdd ):
+    """This function does the AGDD plots in a nplots vertical stack of plots.
+    iplot is the current plot (from top to bottom, starting at 1), tbase and
+    tmax are the values used for AGDD calculations. t_range is a temporal range
+    (usually DoY) and temp and AGDD are extracted 2m temperature and AGDD"""
+    plt.subplot ( nplots, 1, iplot)
+    # Put a grey area for the AGDD calculation bounds
+    plt.axhspan ( tbase, tmax, xmin=0, xmax=366, color='0.9' )
+    # Plot temperature
+    plt.plot ( t_range, temp, '-r', label="Tm" )
+    plt.ylabel("Mean Temp [degC]")
+    plt.grid ( True )
+    plt.twinx()
+    plt.plot ( t_range, agdd, '-g', label="AGDD" )
+    plt.ylabel ( "AGDD [degC]")
+    

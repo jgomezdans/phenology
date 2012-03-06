@@ -119,36 +119,9 @@ temperature. Some functions have been provided for you to access the data easily
    # Temporal range for plots
    t_range =  np.arange ( 1, 366 )
    # First subplot is Hainich (DE)
-   plt.subplot ( 3, 1, 1)
-   # Put a grey area for the AGDD calculation bounds
-   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
-   # Plot temperature
-   plt.plot ( t_range, temp_hainich, '-r', label="Tm" )
-   plt.ylabel("Mean Temp [degC]")
-   plt.grid ( True )
-   plt.twinx()
-   plt.plot ( t_range, agdd_hainich, '-g', label="AGDD" )
-   plt.ylabel ( "AGDD [degC]")
-   plt.subplot ( 3, 1, 2)
-   # Second subplot is Tomsk. Everything as before
-   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
-   plt.plot ( t_range, temp_tomsk, '-r', label="Tm" )
-   plt.ylabel("Mean Temp [degC]")
-   plt.grid ( True )
-   plt.twinx()
-   plt.plot ( t_range, agdd_tomsk, '-g', label="AGDD" )
-   plt.ylabel ( "AGDD [degC]")
-   plt.subplot ( 3, 1, 3)
-   # Third subplot is Tumbarumba. Everything as before
-   plt.axhspan ( 10, 40, xmin=0, xmax=366, color='0.9' )
-   plt.plot ( t_range, temp_tumbarumba, '-r', label="Tm" )
-   plt.ylabel("Mean Temp [degC]")
-   plt.grid ( True )
-   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
-   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
-   plt.twinx()
-   plt.plot ( t_range, agdd_tumbarumba, '-g', label="AGDD" )
-   plt.ylabel ( "AGDD [degC]")
+   agdd_plots ( 3, 1, 10, 40, t_range, temp_hainich, agdd_hainich )
+   agdd_plots ( 3, 2, 10, 40, t_range, temp_tomsk, agdd_tomsk )
+   agdd_plots ( 3, 3, 10, 40, t_range, temp_tumbarumba, agdd_tumbarumba )
    plt.xlabel("DoY/2005")
    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
@@ -166,11 +139,11 @@ Inspection of typical evolution of vegetation indices like the one carried out
 above suggest that a simple phenology model that goes from a minimum to a maximum
 and then decreases again may be suitable, at least for the Northern Hemisphere.
 One such method used successfully in `De Beurs and Henebry (2008)`_ by using
-a simple quadratic function of AGDD:
+a simple quadratic function of time:
 
 .. math::
     
-    NDVI(t) = a\cdot AGDD^{2} + b\cdot AGDD + c 
+    NDVI(t) = at^{2} + bt + c 
 
 .. plot::
    :include-source:
@@ -180,60 +153,33 @@ a simple quadratic function of AGDD:
    import numpy as np
    from scipy.optimize import leastsq
    from phenology import *
-   # These next few lines retrieve the mean daily temperature and
-   # AGDD, but with 
-   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, latitude=57, longitude=86 )
-   # Grab NDVI. Only the first year
-   ndvi = plot_ndvi (  86, 57 )[:12]
-   # Need to clear plot
-   plt.clf()
-   # The following array are the mid-month DoY dates to which NDVI could relate
-   # to
-   t = np.array([ 16,  44,  75, 105, 136, 166, 197, 228, 258, 289, 319, 350])
-   # We will interpolate NDVI to be daily. For this we need the following array
-   ti = np.arange ( 1, 366 )
-   # This is a simple linear interpolator
-   ndvid = np.interp ( ti, t, ndvi )
-   # The fitness function is defined as a lambda function for simplicity
-   fitf = lambda p, ndvid, agdd: \
-        ndvid -( p[0]*agdd**2 +p[1]*agdd+p[2])
-   # Fit fitf using leastsq, with an initial guess of 0, 0, 0
-   ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
-   plt.plot ( ti, ndvid, '-r', label="Obs NDVI" )
-   plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
-       '-g', label="Fit" )
-   # Now, try a different base temperature
-   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, tbase=-5,latitude=57, \
-        longitude=86 )
-   ( xsol, msg ) = leastsq ( fitf, [0, 0,0], args=(ndvid, agdd_tomsk) )
-   plt.plot ( ti, xsol[0]*agdd_tomsk*agdd_tomsk +xsol[1]*agdd_tomsk+xsol[2], \
-      '-b', label="Fit (-5)" )
+   # The following line grabs the data, selects 2001 as the year we'll be
+   # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+   # fitting output message, and forward modelled NDVI for the complete time
+   # series (2001-2011).
+   retval = fit_phenology_model( 86, 57, [2001], pheno_model="quadratic" )
+   plt.subplot ( 2, 1, 1 )
+   plt.plot ( retval[1], '-r', label="MODIS NDVI" )
+   plt.plot ( retval[-1], '-g', label="Predicted" )
+   plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
    plt.grid ( True )
+   plt.ylabel("NDVI")
+   plt.subplot ( 2, 1, 2 )
+   plt.plot ( retval[0], '-r' )
+   plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+   plt.xlabel ("Time [DoY since 1/1/2001]")
+   plt.ylabel (r'AGDD $[^{o}C]')
+   print retval[-3] # Print out the fit parameters
    plt.show()     
     
 We can see that the quadratic model has some complications even fitting a simple
-NDVI profile like that of Siberia. The model, as introduced above, will also 
+NDVI profile like that of Siberia.The model, as introduced above, will also 
 struggle to cope with NDVI patterns typical of the Southern Hemisphere (unless
 a temporal shift is introduced). These limitations have lead to the development
 of more complex and robust methods. 
-    
-Other more complex models have been developed in the literature, that make use
-of different temporal template shapes (such as asymetric Gaussian functions, or
-the double logistic function). A double logistic model (after e.g. 
-`Zhang et al. (2003)`_ or `Sobrino and Julien (2011)`_ ) is given by 
 
-.. math::
-    
-    NDVI(t) =   NDVI_{0} + (NDVI_{M} - NDVI_{0} )\cdot
-    \left[\frac{1}{1+\exp(-m_{s}(AGDD-S))} + 
-    \frac{1}{1+\exp(m_{A}(AGDD-A))} - 1\right]
-    
-In comparison with the quadratic model, the double logistic model will provide a
-more flexible fit to the data by virtue of having 6 parameters (the :math:`NDVI_{0}`
-and :math:`NDVI_{M}` terms are maximum and minimum NDVI, and can be readily 
-estimated from the time series).
 
 Other methods to fit a model to observations of NDVI rely on Fourier analysis
 ideas. Fourier analysis states that within a closed interval, any periodic
@@ -257,8 +203,87 @@ frequency at which one can extract information is governed by the periodicity of
 the data, wihch in our case is monthly. Also, fast events might be blurred. For
 a more in-depht analysis, see e.g. `Moody and Johnson (2001)`_
 
+.. plot::
+    :include-source:
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 86, 57, [2001], pheno_model="fourier")
+    plt.subplot ( 2, 1, 1 )
+    plt.plot ( retval[1], '-r', label="MODIS NDVI" )
+    plt.plot ( retval[-1], '-g', label="Predicted" )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.grid ( True )
+    plt.ylabel("NDVI")
+    plt.subplot ( 2, 1, 2 )
+    plt.plot ( retval[0], '-r' )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.xlabel ("Time [DoY since 1/1/2001]")
+    plt.ylabel ("AGDD")
+    print retval[-3] # Print out the fit parameters
+    plt.show()
+   
+This code demonstrates that the fit using the Fourier model is good
 
+Other more complex models have been developed in the literature, that make use
+of different temporal template shapes (such as asymetric Gaussian functions, or
+the double logistic function). A double logistic model (after e.g. 
+`Zhang et al. (2003)`_ or `Sobrino and Julien (2011)`_ ) is given by 
+
+.. math::
     
+    NDVI(t) =   NDVI_{0} + \DeltaNDVI\cdot
+    \left[\frac{1}{1+\exp(-m_{s}(AGDD-S))} + 
+    \frac{1}{1+\exp(m_{A}(AGDD-A))} - 1\right]
+    
+In comparison with the quadratic model, the double logistic model will provide a
+more flexible fit to the data by virtue of having 6 parameters (the :math:`NDVI_{0}`
+and :math:`NDVI_{M}` terms are maximum and minimum NDVI, and can be readily 
+estimated from the time series).
+
+.. plot::
+    :include-source:
+        
+    # Import some libraries, in case you haven't yet imported them
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import leastsq
+    from phenology import *
+    # The following line grabs the data, selects 2001 as the year we'll be
+    # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
+    # fitting output message, and forward modelled NDVI for the complete time
+    # series (2001-2011).
+    retval = fit_phenology_model( 86, 57, [2001], pheno_model="dbl_logistic")
+    plt.subplot ( 2, 1, 1 )
+    plt.plot ( retval[1], '-r', label="MODIS NDVI" )
+    plt.plot ( retval[-1], '-g', label="Predicted" )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
+    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+    plt.grid ( True )
+    plt.ylabel("NDVI")
+    plt.subplot ( 2, 1, 2 )
+    plt.plot ( retval[0], '-r' )
+    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
+    plt.xlabel ("Time [DoY since 1/1/2001]")
+    plt.ylabel ("AGDD")
+    print retval[-3] # Print out the fit parameters
+    plt.show()
+
+Relating phenology to meteorological forcings
+================================================
+
+In the previous section we have fitted phenological models to observations of 
+vegetation indices. We can use the parameters that we recovered to 
     
 .. _De Beurs and Henebry (2008): http://geography.vt.edu/deBeurs_Henebry_JClimate.pdf
 
