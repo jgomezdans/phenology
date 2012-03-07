@@ -152,8 +152,8 @@ function can be expressed as a sum of increasing frequency sine waves:
     
 .. math::
     
-    NDVI(t) = \overline{NDVI}(t) + \sum_{i=1}^{N/2}A_{i}\cos(2\pi i t/N) + \phi_{i}
-    
+   NDVI(t) = \overline{NDVI}(t) + \sum_{i=1}^{N}A_{i}\cos(2\pi i t/N + \phi_{c,i})+ \sum_{i=1}^{N}B_{i}\sin(2\pi i t/N + \phi_{s,i})
+   
 where :math:`\overline{NDVI}(t)` is the mean NDVI value within the period of 
 interest :math:`(0,N)`. :math:`A_{i}` and :math:`\phi_{i}` are the magnitude and
 phase of the :math:`i`-th harmonic, respectively. Usually, only a few terms of the

@@ -23,10 +23,11 @@ def fourier_model ( p, agdd, n_harm):
     integration_time = len ( agdd )
     t = np.arange ( 1, integration_time + 1)
     result = t*.0 + p[0]
+    w=1
     for i in xrange ( 1, n_harm*4, 4 ):
-        result =result + p[i]*np.cos ( 2.0*np.pi*t/integration_time + p[i+1] ) \
-               + p[i+2]*np.sin ( 2.0*np.pi*t/integration_time + p[i+3] )    
-    
+        result =result + p[i]*np.cos ( 2.0*np.pi*w*t/integration_time + p[i+1] ) \
+            + p[i+2]*np.sin ( 2.0*np.pi*w*t/integration_time + p[i+3] )    
+        w = w+1
     return result
     
 def dbl_logistic_model ( p, agdd ):
@@ -67,7 +68,7 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
         
         
 def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
-            xinit=None, tbase=10, tmax=40, n_harm=3 ):
+            xinit=None, tbase=10, tmax=40, n_harm=3, agdd=True ):
     """This function fits a phenology model of choice for a given location and
     time period. The user can also modify the base and maximum temperature for
     AGDD calculations, as well as the number of harmonics used by the Fourier
@@ -98,9 +99,15 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
     t_axis = []
     for y in xrange ( 2001, 2012 ):
         if y % 4 == 0:
-            t_axis = np.r_[t_axis, np.arange ( 1, 367) ]
+            if agdd:
+                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*367]
+            else:
+                t_axis = np.r_[t_axis, np.arange ( 1, 367) ]
         else:
-            t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
+            if agdd:
+                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*366]
+            else:
+                t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
                     
     if xinit is None:
         # The user hasn't provided a starting guess
