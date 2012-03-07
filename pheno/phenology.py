@@ -68,7 +68,7 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
         
         
 def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
-            xinit=None, tbase=10, tmax=40, n_harm=3, agdd=True ):
+            xinit=None, tbase=10, tmax=40, n_harm=3, agdd=False ):
     """This function fits a phenology model of choice for a given location and
     time period. The user can also modify the base and maximum temperature for
     AGDD calculations, as well as the number of harmonics used by the Fourier
