@@ -100,12 +100,12 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
     for y in xrange ( 2001, 2012 ):
         if y % 4 == 0:
             if agdd:
-                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*367]
+                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*367] ]
             else:
                 t_axis = np.r_[t_axis, np.arange ( 1, 367) ]
         else:
             if agdd:
-                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*366]
+                t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*366] ]
             else:
                 t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
                     
