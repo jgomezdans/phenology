@@ -67,7 +67,7 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
     return np.array(output).squeeze()
         
         
-def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
+def fit_phenology_model ( longitude, latitude, year,temp, pheno_model,  \
             xinit=None, tbase=10, tmax=40, n_harm=3, agdd=False ):
     """This function fits a phenology model of choice for a given location and
     time period. The user can also modify the base and maximum temperature for
@@ -94,8 +94,7 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
         raise TypeError, "year has to be a scalar or  list"
     ndvi_all = get_ndvi (  longitude, latitude )/10000.
 
-    ( temp,agdd_all ) = calculate_gdd ( year=None, tbase=tbase, tmax=tmax, \
-        latitude=latitude, longitude=longitude )
+    agdd = calculate_gdd ( temp, tbase=tbase, tmax=tmax )
     t_axis = []
     for y in xrange ( 2001, 2012 ):
         if y % 4 == 0:
@@ -144,28 +143,25 @@ def fit_phenology_model ( longitude, latitude, year, pheno_model,  \
     return ( agdd_all, interpolate_daily( ndvi_all ), xsol, msg, \
             np.array (fwd_model) )
     
-    
-def calculate_gdd ( year=None, tbase=10, tmax=40, \
-        latitude=None, longitude=None, \
-        fname="/data/geospatial_20/ucfajlg/meteo/temp_2m_unscaled.tif" ):
-    """This function calculates the Growing Degree Days for a given year from
-    the ERA Interim daily mean surface temperature data. The user can select a 
-    base temperature in degrees Celsius. By default, the value is 10. If no
-    year is specified, the whole time series is retrieved. Note that if you 
-    don't specify time and location, the operation can be quite slow and will
-    return lots of data."""
+def get_temperature ( year=None, latitude=None, longitude=None, \
+        fname="/data/geospatial_20/ucfajlg/meteo/temp_2m.tif" ):
+    """This function grabs the temperature for a given year (or all of them if
+    set ``year`` is set to ``None``, for the whole globe or for a given location.
+    """
+    # These are factors for the ERA data
     a = 0.0020151192442093
     b = 258.72093867714
     # Check that year range is OK
     assert ( (year >= 2001 and year <= 2011) or (year is None) )
-    assert ( tmax > tbase )
     if year is not None:
         if year == 2004 or year == 2008:
             n_doys = 366
         else:
             n_doys = 365
-        year = year - 2001
-    if latitude is None:
+    year = year - 2001
+    if (latitude is None):
+        # Grab a whole year of data
+        # Longitude has to be None too...
         assert ( longitude is None ) 
         g = gdal.Open ( fname )
         if year is not None:
@@ -174,32 +170,48 @@ def calculate_gdd ( year=None, tbase=10, tmax=40, \
             temp = g.ReadAsArray()
         # Scale to degree C
         temp = np.where ( temp!=-32767, temp*a + b - 273.15, -32767)
-        b = np.clip ( temp, tbase, tmax )
-        c = np.where ( b-tbase<0, 0, b-tbase )
-        agdd = c.cumsum (axis=0)
     else:
         assert ( longitude >= -180 and longitude <= 180 )
         assert ( latitude >= -90 and latitude <= 90 )
         (ix, iy) = pixel_loc ( longitude, latitude )
         g = gdal.Open ( fname )
+
         if year is not None:
-            temp = g.ReadAsArray()[((year)*n_doys):((year+1)*n_doys), iy, ix ]
+            n_bands = np.arange ( ((year)*n_doys), ((year+1)*n_doys) ) + 1
         else:
-            temp = g.ReadAsArray()[:, iy, ix ]
+            n_bands = np.arange ( g.RasterCount ) + 1
+
+        buf = g.ReadRaster( ix, iy, 1, 1,  buf_xsize=1, buf_ysize=1, \
+                band_list=n_bands )
+        temp = numpy.frombuffer(buf, dtype=np.int16) 
         # Scale to degree C
         temp = np.where ( temp!=-32767, temp*a + b- 273.15, -32767)
+        
+    return temp
+
+def calculate_gdd ( temp, tbase=10, tmax=40 ):
+    """This function calculates the Growing Degree Days for a given year from
+    the ERA Interim daily mean surface temperature data. The user can select a 
+    base temperature in degrees Celsius. By default, the value is 10. If no
+    year is specified, the whole time series is retrieved. Note that if you 
+    don't specify time and location, the operation can be quite slow and will
+    return lots of data."""
+    
+    if temp.ndim == 3:
         b = np.clip ( temp, tbase, tmax )
-        c = np.where ( b-tbase < 0, 0, b-tbase )
-        if year is None:
+        c = np.where ( b-tbase<0, 0, b-tbase )
+        agdd = c.cumsum (axis=0)
+    else:
+        if temp.shape[0] <= 367:
+            # Only one year of data
+            agdd = c.cumsum ( axis=0 )
+        else:
             agdd = np.zeros( 4017 )
             for y in xrange ( 11 ):
                 a = c[y*365:(y+1)*365]
                 o = a.cumsum ( axis=0)
                 agdd[y*365:(y+1)*365] = o
-        else:
-            agdd = c.cumsum ( axis=0 )
-        
-    return ( temp, agdd )
+    return agdd
 
 def get_ndvi ( longitude, latitude, \
         plot=False,  data_dir="/data/geospatial_20/ucfajlg/MODIS/output" ):
