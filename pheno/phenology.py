@@ -174,6 +174,8 @@ def get_temperature ( year=None, latitude=None, longitude=None, \
         assert ( longitude >= -180 and longitude <= 180 )
         assert ( latitude >= -90 and latitude <= 90 )
         (ix, iy) = pixel_loc ( longitude, latitude )
+        ix = int ( np.floor ( ix ) )
+        iy = int ( np.floor ( iy ) )
         g = gdal.Open ( fname )
 
         if year is not None:
@@ -183,7 +185,7 @@ def get_temperature ( year=None, latitude=None, longitude=None, \
 
         buf = g.ReadRaster( ix, iy, 1, 1,  buf_xsize=1, buf_ysize=1, \
                 band_list=n_bands )
-        temp = numpy.frombuffer(buf, dtype=np.int16) 
+        temp = np.frombuffer(buf, dtype=np.int16) 
         # Scale to degree C
         temp = np.where ( temp!=-32767, temp*a + b- 273.15, -32767)
         
@@ -204,8 +206,12 @@ def calculate_gdd ( temp, tbase=10, tmax=40 ):
     else:
         if temp.shape[0] <= 367:
             # Only one year of data
+            b = np.clip ( temp, tbase, tmax )
+            c = np.where ( b-tbase < 0, 0, b-tbase )
             agdd = c.cumsum ( axis=0 )
         else:
+            b = np.clip ( temp, tbase, tmax )
+            c = np.where ( b-tbase < 0, 0, b-tbase )
             agdd = np.zeros( 4017 )
             for y in xrange ( 11 ):
                 a = c[y*365:(y+1)*365]
