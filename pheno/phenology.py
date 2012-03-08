@@ -68,7 +68,7 @@ def mismatch_function ( p, pheno_func, ndvi, agdd, years, n_harm=3 ):
         
         
 def fit_phenology_model ( longitude, latitude, year,temp, pheno_model,  \
-            xinit=None, tbase=10, tmax=40, n_harm=3, agdd=False ):
+            xinit=None, tbase=10, tmax=40, n_harm=3, do_agdd=False ):
     """This function fits a phenology model of choice for a given location and
     time period. The user can also modify the base and maximum temperature for
     AGDD calculations, as well as the number of harmonics used by the Fourier
@@ -94,16 +94,16 @@ def fit_phenology_model ( longitude, latitude, year,temp, pheno_model,  \
         raise TypeError, "year has to be a scalar or  list"
     ndvi_all = get_ndvi (  longitude, latitude )/10000.
 
-    agdd = calculate_gdd ( temp, tbase=tbase, tmax=tmax )
+    agdd_all = calculate_gdd ( temp, tbase=tbase, tmax=tmax )
     t_axis = []
     for y in xrange ( 2001, 2012 ):
         if y % 4 == 0:
-            if agdd:
+            if do_agdd:
                 t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*367] ]
             else:
                 t_axis = np.r_[t_axis, np.arange ( 1, 367) ]
         else:
-            if agdd:
+            if do_agdd:
                 t_axis = np.r_[t_axis, agdd_all[ (y-2001)*365:(y-2001+1)*366] ]
             else:
                 t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
@@ -111,6 +111,7 @@ def fit_phenology_model ( longitude, latitude, year,temp, pheno_model,  \
     if xinit is None:
         # The user hasn't provided a starting guess
         xinit = [.5,] * n_params
+        # Dbl_logistic might require sensible starting point
         if pheno_model == "dbl_logistic":
             xinit[0] = ndvi_all.min()
             xinit[1] = ndvi_all.max() - ndvi_all.min()
@@ -118,26 +119,41 @@ def fit_phenology_model ( longitude, latitude, year,temp, pheno_model,  \
             xinit[3] = 120
             xinit[4] = 0.13
             xinit[5] = 200
-    # Dbl_logistic might require sensible starting point
     ( xsol, msg ) = leastsq ( mismatch_function, xinit, \
         args=( pheno_func, ndvi_all, t_axis, years, n_harm ), maxfev=1000000 )
     fwd_model = []
     if pheno_model != "fourier":
         for y in xrange( 2001, 2012):
             if y % 4 == 0:
-                ax = pheno_func ( xsol, np.arange(1, 367) )
+                if do_agdd:
+                    ax = pheno_func ( xsol, agdd_all[ \
+                            (y-2001)*365:(y-2001+1)*367] )
+                else:
+                    ax = pheno_func ( xsol, np.arange(1, 367) )
                 [fwd_model.append ( x ) for x in ax]
             else:
-                ax = pheno_func ( xsol, np.arange(1, 366) )
+                if do_agdd:
+                    ax = pheno_func ( xsol, agdd_all[ \
+                    (y-2001)*365:(y-2001+1)*366] )
+                else:
+                    ax = pheno_func ( xsol, np.arange(1, 366) )
                 [fwd_model.append ( x ) for x in ax]
                     
     else:
         for y in xrange( 2001, 2012):
             if y % 4 == 0:
-                ax = pheno_func ( xsol, np.arange(1,367), n_harm )
+                if do_agdd:
+                    ax = pheno_func ( xsol, agdd_all[ \
+                            (y-2001)*365:(y-2001+1)*367], n_harm )
+                else:
+                    ax = pheno_func ( xsol, np.arange(1, 367), n_harm )
                 [fwd_model.append ( x ) for x in ax]
             else:
-                ax = pheno_func ( xsol, np.arange(1,366), n_harm )
+                if do_agdd:
+                    ax = pheno_func ( xsol, agdd_all[ \
+                    (y-2001)*365:(y-2001+1)*366], n_harm )
+                else:
+                    ax = pheno_func ( xsol, np.arange(1, 366), n_harm )
                 [fwd_model.append ( x ) for x in ax]
                     
     return ( agdd_all, interpolate_daily( ndvi_all ), xsol, msg, \
@@ -158,7 +174,7 @@ def get_temperature ( year=None, latitude=None, longitude=None, \
             n_doys = 366
         else:
             n_doys = 365
-    year = year - 2001
+        year = year - 2001
     if (latitude is None):
         # Grab a whole year of data
         # Longitude has to be None too...

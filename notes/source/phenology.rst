@@ -104,7 +104,7 @@ The concept of Accumulated Growing Degree Days (AGDD) is often a better metric w
 
 where:
 
-.. math:: T'(t) = \left\{ \begin{array}{l l} 0 & \quad \text{if $T(t) <= T_{base}$}\\ 0 & \quad \text{if $T(t) >= T_{max}$}\\ T(t)-T_{base} & \quad \text{else} \end{array} \right.
+.. math:: T'(t) = \left\{ \begin{array}{l l} 0 & \quad \text{if $T(t) <= T_{base}$}\\ T(t)-T_{base} & \quad \text{if $T_{base} < T(t) < T_{max}$}\\0 & \quad \text{if $T(t) >= T_{max}$} \end{array} \right.
 
 
 So, we don't progress the phenology if the daily temperature is greater than the maximum threshold or less than the lower threshold and otherwise we increment by the daily temperature (minus the lower threshold). 
@@ -124,12 +124,14 @@ temperature. Some functions have been provided for you to access the data easily
    # AGDD for the three sites mentioned above
    tbase = 10.
    tmax = 40.
-   ( temp_hainich, agdd_hainich ) = calculate_gdd( 2005, \
-            latitude=51, longitude=10, tbase=tbase, tmax=tmax )
-   ( temp_tomsk, agdd_tomsk ) = calculate_gdd( 2005, \
-            latitude=57, longitude=86, tbase=tbase, tmax=tmax )
-   ( temp_tumbarumba, agdd_tumbarumba ) = calculate_gdd( 2005, \
-            latitude=-35, longitude=148, tbase=tbase, tmax=tmax  )
+   # First load up temperature data
+   temp_hainich = get_temperature ( 2005, latitude=51, longitude=10 )
+   temp_tomsk = get_temperature ( 2005, latitude=57, longitude=86 )
+   temp_tumbarumba = get_temperature ( 2005, latitude=-35, longitude=148 )
+   # Calculate AGDD
+   agdd_hainich  = calculate_gdd( temp_hainich, tbase=tbase, tmax=tmax )
+   agdd_tomsk  = calculate_gdd( temp_tomsk, tbase=tbase, tmax=tmax )
+   agdd_tumbarumba  = calculate_gdd( temp_tumbarumba, tbase=tbase, tmax=tmax )
    # Temporal range for plots
    t_range =  np.arange ( 1, 366 )
    # First subplot is Hainich (DE)
@@ -180,13 +182,17 @@ a simple quadratic function of time:
    # fitting output message, and forward modelled NDVI for the complete time
    # series (2001-2011).
    plt.clf()
-   retval = fit_phenology_model( 86, 57, [2001], pheno_model="quadratic" )
+   tbase = 10.
+   tmax = 40.
+   # First load up temperature data
+   temp= get_temperature ( latitude=57, longitude=86 )
+   retval = fit_phenology_model( 86, 57, [2001], temp, pheno_model="quadratic")
    plt.subplot ( 2, 1, 1 )
    plt.plot ( retval[1], '-r', label="MODIS NDVI" )
    plt.plot ( retval[-1], '-g', label="Predicted" )
    plt.axvline ( 365, ymin=-0.1, ymax=1.01, lw=1.5)
    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
-   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+   plt.legend(loc='best', numpoints=1,fancybox=True, shadow=True ) # Legend
    plt.grid ( True )
    plt.ylabel("NDVI")
    plt.subplot ( 2, 1, 2 )
@@ -228,7 +234,11 @@ It is interesting now to examine the data a bit more carefully, as a function of
    from phenology import *
    tbase = 10.0
    tmax = 40.0
-   retval = fit_phenology_model( 86, 57, [2001], tbase=tbase, tmax=tmax,pheno_model="quadratic" )
+   # First load up temperature data
+   temp= get_temperature ( latitude=57, longitude=86 )
+   retval = fit_phenology_model( 86, 57, [2001], temp, pheno_model="quadratic", \
+                tbase=tbase, tmax=tmax )
+   
    agdd = retval[0]
    ndvi = retval[1]
    # set up time information
@@ -239,16 +249,14 @@ It is interesting now to examine the data a bit more carefully, as a function of
        else:
            t_axis = np.r_[t_axis, np.arange ( 1, 366) ]
    plt.subplot ( 2, 1, 1 )
-   plt.plot ( agdd, ndvi, 'ro')
+   plt.plot ( agdd, ndvi,  'o',markerfacecolor='none', markeredgecolor='r' )
    plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
    plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
    plt.grid ( True )
    plt.ylabel("NDVI")
    plt.xlabel('AGDD, tbase=%f, tmax=%f'%(tbase,tmax))
    plt.subplot ( 2, 1, 2 )
-   plt.plot ( t_axis, ndvi, 'go')
-   plt.rcParams['legend.fontsize'] = 9 # Otherwise too big
-   plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+   plt.plot ( t_axis, ndvi, 'o',markerfacecolor='none', markeredgecolor='g' )
    plt.grid ( True )
    plt.ylabel("NDVI")
    plt.xlabel('Time')
@@ -271,34 +279,32 @@ Lets now change the base temperature and look for consistency:
    import numpy as np
    from scipy.optimize import leastsq
    from phenology import *
+   from pheno_utils import interpolate_daily
    years = np.arange(2001,2012)
    # get the NDVI for  tomsk
    lat = 57.
    lon = 86.
 
    tmax = 40.
-
-   ndvi = (fit_phenology_model( lon, lat,  [2001], pheno_model="quadratic" ))[1]
+   temp = get_temperature ( latitude=lat, longitude=lon )
+   ndvi = get_ndvi ( lon, lat )/10000.
+   ndvi = interpolate_daily ( ndvi )
    plt.clf()
 
    # which base temperatures to use
    tbases = np.array([-20., -15.,-12.5, -10.,-8.0,0.0,10.])
    iplot = 1
    plt.rcParams['legend.fontsize'] = 9 
-
+   plt.rcParams['font.size'] = 8
    for tbase in tbases:
        plt.subplot ( tbases.shape[0], 1, iplot )
        plt.grid ( True )
        # get the AGDD for this base temp
-       agdd = []
-       for year in years:
-           ( temp, agdd_year ) = calculate_gdd( year,latitude=lat, longitude=lon,\
-                                                           tbase=tbase, tmax=tmax)
-           agdd = np.r_[agdd,agdd_year]
+       agdd = calculate_gdd ( temp, tbase=tbase, tmax=tmax )
        # plot ndvi as fn of AGDD
-       plt.plot ( agdd, ndvi, 'r.',label='tbase=%f'%tbase)
+       plt.plot ( agdd, ndvi, 'r.',label='tbase=%3G'%tbase)
        plt.ylabel("NDVI")
-       plt.legend(loc='best', fancybox=True, shadow=True ) # Legend
+       plt.legend(loc=8,numpoints=1, fancybox=True, shadow=True ) # Legend
        iplot += 1
    plt.show()
 
@@ -321,9 +327,9 @@ We can see that the 'true' :math:`t_{base}` should be around :math:`-10^oC` here
 
    tmax = 40.
    tbase = -10.
-
-   retval = fit_phenology_model( lon, lat,  [2001,2002,2003,2004], \
-             tbase=tbase,tmax=tmax,pheno_model="quadratic",agdd=True )
+   temp = get_temperature ( latitude=lat, longitude=lon )
+   retval = fit_phenology_model( lon, lat,  [2001,2002,2003,2004], temp, \
+             tbase=tbase,tmax=tmax,pheno_model="quadratic",do_agdd=True )
    agdd = np.array([retval[0]*retval[0],retval[0],retval[0]*0.+1])
    # model parameters
    params = retval[-3]
@@ -405,7 +411,8 @@ slightly more sophisticated method presented in `Hernance et al. (2007)`_.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 86, 57, [2001], pheno_model="fourier")
+    temp = get_temperature ( latitude=57, longitude=86 )
+    retval = fit_phenology_model( 86, 57, [2001], temp, pheno_model="fourier")
     plt.subplot ( 2, 1, 1 )
     plt.plot ( retval[1], '-r', label="MODIS NDVI" )
     plt.plot ( retval[-1], '-g', label="Predicted" )
@@ -438,7 +445,8 @@ type of phenologies, such as the Tumbarumba site, quite well:
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 148, -35, [2001], pheno_model="fourier")
+    temp = get_temperature ( latitude=-35, longitude=148 )
+    retval = fit_phenology_model( 148, -35, [2001], temp, pheno_model="fourier")
     plt.subplot ( 2, 1, 1 )
     plt.plot ( retval[1], '-r', label="MODIS NDVI" )
     plt.plot ( retval[-1], '-g', label="Predicted" )
@@ -488,7 +496,9 @@ logistic curves.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 86, 57, [2001], pheno_model="dbl_logistic")
+    temp = get_temperature ( latitude=57, longitude=86 )
+    retval = fit_phenology_model( 86, 57, [2001], temp, \
+            pheno_model="dbl_logistic")
     plt.subplot ( 2, 1, 1 )
     plt.plot ( retval[1], '-r', label="MODIS NDVI" )
     plt.plot ( retval[-1], '-g', label="Predicted" )
@@ -535,7 +545,9 @@ as (respectively) the maximum and minimum value of the first derivative.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 86, 57, [2001], pheno_model="dbl_logistic")
+    temp = get_temperature ( latitude=57, longitude=86 )
+    retval = fit_phenology_model( 86, 57, [2001], temp, \
+            pheno_model="dbl_logistic")
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
@@ -568,7 +580,9 @@ as (respectively) the maximum and minimum value of the first derivative.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 10, 51, [2001], pheno_model="dbl_logistic")
+    temp = get_temperature ( latitude=51, longitude=10 )
+    retval = fit_phenology_model( 10, 51, [2001], temp, \
+            pheno_model="dbl_logistic")
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
@@ -602,7 +616,9 @@ as (respectively) the maximum and minimum value of the first derivative.
     # fitting a qudratic model to, and returns the AGDD, NDVI, parameters, 
     # fitting output message, and forward modelled NDVI for the complete time
     # series (2001-2011).
-    retval = fit_phenology_model( 148, -35, [2001], pheno_model="fourier", n_harm=5)
+    temp = get_temperature ( latitude=-35, longitude=148 )
+    retval = fit_phenology_model( 148, -35, [2001], temp, \
+                pheno_model="fourier", n_harm=5)
     # Plot the fitted curve for year 2001
     plt.plot ( retval[-1][:365], '-r', label="Fit")
     # Plot the observations of NDVI
